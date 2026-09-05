@@ -29,7 +29,6 @@ final class Plugin {
 
     if ( is_admin() ) {
       ( new Admin\Menu() )->register();
-      ( new Admin\RuleForm() )->register();
     }
 
     add_action( 'fluent_affiliate/after_delete_affiliate', [ Store::class, 'forget_affiliate' ] );

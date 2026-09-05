@@ -687,43 +687,14 @@ try {
   facr_it( 'no rules means no change to the amount', abs( (float) $facr_untouched['amount'] - 7.5 ) < 0.001 );
   facr_it( 'no rules means no audit stamp', ! isset( $facr_untouched['settings']['fa_commission_rules'] ) );
 
-  // -------------------------------------------------- input hardening ------
-  // `?action[]=x` posts an array where sanitize_key() demands a string, and every
-  // one of those is a TypeError — a white screen on a GET anyone can craft.
-  facr_it( 'scalar() flattens an array to an empty string', \FACommissionRules\Admin\RuleForm::scalar( [ 'edit' ] ) === '' );
-  facr_it( 'scalar() passes a scalar through as a string', \FACommissionRules\Admin\RuleForm::scalar( 42 ) === '42' );
-  facr_it( 'a sanitiser survives an array-valued request field', sanitize_key( \FACommissionRules\Admin\RuleForm::scalar( [ 'edit' ] ) ) === '' );
-
   // created_at decides the newest-wins tie-break, so it is derived server-side
   // and the form must not offer the browser a field to set it with.
-  facr_it(
-    'the rule form no longer posts created_at',
-    strpos( (string) file_get_contents( FACR_DIR . 'includes/Admin/RuleForm.php' ), 'facr_created_at' ) === false
-  );
   [ $facr_ca_kept ] = Store::validate(
     [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'created_at' => '2020-01-01T00:00:00+00:00' ]
   );
   facr_it( 'validate keeps a created_at that is passed in (an edit)', $facr_ca_kept['created_at'] === '2020-01-01T00:00:00+00:00' );
   [ $facr_ca_new ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
   facr_it( 'validate stamps created_at when none is passed in (a new rule)', $facr_ca_new['created_at'] !== '' );
-
-  // Task: a new rule that fails validation must be resubmittable. Store::validate()
-  // mints a uuid for a new rule's id even when it fails validation (so the id is
-  // ready to save on the next successful attempt) — but stashing that minted id
-  // for redisplay would make the corrected resubmit look like an edit of a rule
-  // Store::get() can never find, and handle_save() would bounce to "missing".
-  $facr_bad_new_input   = [ 'id' => '', 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 'not-a-number', 'rate_type' => 'percentage' ];
-  [ $facr_bad_new_rule, $facr_bad_new_errors ] = Store::validate( $facr_bad_new_input );
-  facr_it( 'a bad new rule fails validation', ! empty( $facr_bad_new_errors ) );
-  facr_it( 'validate mints a uuid for a new rule even on failure', $facr_bad_new_rule['id'] !== '' );
-  $facr_bad_new_stash = \FACommissionRules\Admin\RuleForm::stash_input( $facr_bad_new_input, $facr_bad_new_rule );
-  facr_it( 'stash_input clears the minted id for a new rule', $facr_bad_new_stash['id'] === '' );
-
-  $facr_bad_edit_input = [ 'id' => 'facr_existing_id', 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 'not-a-number', 'rate_type' => 'percentage' ];
-  [ $facr_bad_edit_rule, $facr_bad_edit_errors ] = Store::validate( $facr_bad_edit_input );
-  facr_it( 'a bad edit fails validation', ! empty( $facr_bad_edit_errors ) );
-  $facr_bad_edit_stash = \FACommissionRules\Admin\RuleForm::stash_input( $facr_bad_edit_input, $facr_bad_edit_rule );
-  facr_it( 'stash_input keeps the original id for an edit', $facr_bad_edit_stash['id'] === 'facr_existing_id' );
 
   if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
     $facr_features = \Automattic\WooCommerce\Utilities\FeaturesUtil::get_compatible_features_for_plugin( plugin_basename( FACR_FILE ) );
@@ -734,6 +705,13 @@ try {
   } else {
     echo "SKIP WooCommerce inactive: HPOS declaration not exercised\n";
   }
+
+  // ------------------------------------------------ the PHP screens are gone ---
+  facr_it( 'RulesPage.php is deleted', ! file_exists( FACR_DIR . 'includes/Admin/RulesPage.php' ) );
+  facr_it( 'RuleForm.php is deleted', ! file_exists( FACR_DIR . 'includes/Admin/RuleForm.php' ) );
+  facr_it( 'no admin_post handler is registered', ! has_action( 'admin_post_facr_save_rule' ) && ! has_action( 'admin_post_facr_delete_rule' ) && ! has_action( 'admin_post_facr_bulk' ) );
+  facr_it( 'nothing enqueues wc-enhanced-select any more', strpos( (string) file_get_contents( FACR_DIR . 'includes/Admin/Menu.php' ), 'wc-enhanced-select' ) === false );
+  facr_it( 'the REST controller never reads created_at from the request', strpos( (string) file_get_contents( FACR_DIR . 'includes/Rest/Controller.php' ), "\$body['created_at']" ) === false );
 
   // ------------------------------------------------------------ labels ------
   $facr_lbl = [
@@ -800,26 +778,6 @@ try {
   // longer has must never fall through to "create a new rule" behaviour, and
   // a submit against a Fluent-owned id must say so rather than "Rule saved."
   facr_it( 'Store::get() returns null for an id that does not exist', Store::get( 'facr_does_not_exist' ) === null );
-
-  $facr_notice_reflection = new ReflectionMethod( \FACommissionRules\Admin\RulesPage::class, 'notice' );
-  $facr_notice_reflection->setAccessible( true );
-  $facr_render_notice     = static function ( string $notice ) use ( $facr_notice_reflection ): string {
-    $_GET['facr_notice'] = $notice;
-    ob_start();
-    $facr_notice_reflection->invoke( null );
-    unset( $_GET['facr_notice'] );
-    return (string) ob_get_clean();
-  };
-
-  facr_it(
-    'the missing-rule notice states the rule is gone',
-    strpos( $facr_render_notice( 'missing' ), esc_html__( 'That rule no longer exists.', 'fa-commission-rules' ) ) !== false
-  );
-  facr_it(
-    "the readonly notice points at Fluent Affiliate's own settings",
-    strpos( $facr_render_notice( 'readonly' ), esc_html__( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ) ) !== false
-  );
-
 
   // ----------------------------------------------------------- widgets ------
   [ $facr_wrule ] = Store::validate(
