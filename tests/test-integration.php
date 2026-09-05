@@ -613,6 +613,49 @@ try {
   facr_it( 'no rules means no change to the amount', abs( (float) $facr_untouched['amount'] - 7.5 ) < 0.001 );
   facr_it( 'no rules means no audit stamp', ! isset( $facr_untouched['settings']['fa_commission_rules'] ) );
 
+  // ------------------------------------------------------------ labels ------
+  $facr_lbl = [
+    'id'          => 'lbl',
+    'status'      => 'active',
+    'scope_type'  => 'affiliate',
+    'scope_id'    => $facr_aff_id,
+    'target_type' => 'all',
+    'target_ids'  => [],
+    'rate'        => 12.5,
+    'rate_type'   => 'percentage',
+    'starts_at'   => '',
+    'ends_at'     => '',
+    'note'        => '',
+    'created_at'  => '2026-01-01T00:00:00+00:00',
+    'readonly'    => false,
+  ];
+  $facr_lbl_of = static fn( array $overrides ): array => array_merge( $facr_lbl, $overrides );
+
+  facr_it( 'scope_label names the affiliate', strpos( \FACommissionRules\Admin\RulesPage::scope_label( $facr_lbl ), '#' . $facr_aff_id ) !== false );
+  facr_it( 'scope_label for everyone carries no id', \FACommissionRules\Admin\RulesPage::scope_label( $facr_lbl_of( [ 'scope_type' => 'all', 'scope_id' => 0 ] ) ) === __( 'Everyone', 'fa-commission-rules' ) );
+  if ( Fluent::has_pro() && $facr_group_id > 0 ) {
+    facr_it( 'scope_label names the group', strpos( \FACommissionRules\Admin\RulesPage::scope_label( $facr_lbl_of( [ 'scope_type' => 'group', 'scope_id' => $facr_group_id ] ) ), 'FACR Test Group' ) !== false );
+  } else {
+    echo "SKIP Fluent Affiliate Pro inactive: group label not exercised\n";
+  }
+
+  facr_it( 'target_label says all products', \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl ) === __( 'All products', 'fa-commission-rules' ) );
+  facr_it( 'target_label names the category', strpos( \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) ), 'FACR Child' ) !== false );
+  facr_it( 'target_label names the product', strpos( \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_id ] ] ) ), 'FACR Test Product A' ) !== false );
+  facr_it( 'target_label falls back to the id', strpos( \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ 999999999 ] ] ) ), '#999999999' ) !== false );
+
+  facr_it( 'rate_label trims trailing zeros', \FACommissionRules\Admin\RulesPage::rate_label( $facr_lbl ) === '12.5%' );
+  facr_it( 'rate_label keeps whole percentages whole', \FACommissionRules\Admin\RulesPage::rate_label( $facr_lbl_of( [ 'rate' => 10.0 ] ) ) === '10%' );
+  facr_it( 'rate_label formats a flat rate as money', strpos( \FACommissionRules\Admin\RulesPage::rate_label( $facr_lbl_of( [ 'rate' => 3.0, 'rate_type' => 'flat' ] ) ), Fluent::money( 3.0 ) ) !== false );
+
+  facr_it( 'window_label says always when unbounded', \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl ) === __( 'Always', 'fa-commission-rules' ) );
+  facr_it( 'window_label renders dates in the site format', strpos( \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl_of( [ 'starts_at' => '2026-09-01', 'ends_at' => '2026-09-30' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
+  facr_it( 'window_label handles an open end', strpos( \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl_of( [ 'starts_at' => '2026-09-01' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-01' ) ) ) !== false );
+  facr_it( 'window_label handles an open start', strpos( \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
+
+  $facr_described = \FACommissionRules\Admin\RulesPage::describe( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) );
+  facr_it( 'describe composes rate, target and window', strpos( $facr_described, '12.5%' ) !== false && strpos( $facr_described, __( 'All products', 'fa-commission-rules' ) ) !== false );
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );
