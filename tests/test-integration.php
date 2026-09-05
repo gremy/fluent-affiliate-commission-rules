@@ -248,6 +248,52 @@ try {
   facr_it( 'resolvable passes the context through', Store::resolvable( 'renewal' ) === Store::fluent_global_rules( 'renewal' ) );
 
   Fluent::update_option( '_woo_connector_config', $facr_neutral_woo );
+  // ------------------------------------------------------------- lines ------
+  $lines = \FACommissionRules\LineBuilder::from_products(
+    [
+      [ 'item_id' => 101, 'title' => 'A', 'subtotal' => 100.0, 'tax' => 19.0, 'total' => 100.0 ],
+      [ 'item_id' => 102, 'title' => 'B', 'subtotal' => 50.0, 'tax' => 9.5, 'total' => 50.0 ],
+    ]
+  );
+  facr_it( 'one line per product item', count( $lines ) === 2 );
+  facr_it( 'line carries the product id', $lines[0]['product_id'] === 101 );
+  facr_it( 'line has no variation without an order', $lines[0]['variation_id'] === 0 );
+  facr_it(
+    'line total follows the exclude_tax setting',
+    Fluent::excludes_tax() ? abs( $lines[0]['total'] - 100.0 ) < 0.001 : abs( $lines[0]['total'] - 119.0 ) < 0.001
+  );
+  facr_it( 'line carries term keys', array_key_exists( 'term_ids', $lines[0] ) && array_key_exists( 'term_depths', $lines[0] ) );
+
+  $facr_bare = \FACommissionRules\LineBuilder::from_products( [ [ 'item_id' => 101, 'subtotal' => 100.0 ] ], false );
+  facr_it( 'lines can be built without any term lookup', $facr_bare[0]['term_ids'] === [] && $facr_bare[0]['term_depths'] === [] );
+
+  // item_total must mirror BaseConnector::calculateOrderTotal() term for term.
+  facr_it( 'item_total excludes tax when configured', abs( \FACommissionRules\LineBuilder::item_total( [ 'subtotal' => 100.0, 'tax' => 19.0 ] ) - ( Fluent::excludes_tax() ? 100.0 : 119.0 ) ) < 0.001 );
+  facr_it( 'item_total follows the exclude_shipping setting', abs( \FACommissionRules\LineBuilder::item_total( [ 'subtotal' => 100.0, 'shipping' => 12.0 ] ) - ( Fluent::excludes_shipping() ? 100.0 : 112.0 ) ) < 0.001 );
+  facr_it( 'item_total subtracts a discount', abs( \FACommissionRules\LineBuilder::item_total( [ 'subtotal' => 100.0, 'discount' => 30.0 ] ) - 70.0 ) < 0.001 );
+  facr_it( 'item_total is floored at zero', abs( \FACommissionRules\LineBuilder::item_total( [ 'subtotal' => 10.0, 'discount' => 40.0 ] ) ) < 0.001 );
+
+  // An items-less payload still has to produce one line, or an all-products rule
+  // would silently stop applying to it.
+  $facr_whole = \FACommissionRules\LineBuilder::build( [], 'woo', 0, 250.0 );
+  facr_it( 'an empty payload becomes one whole-order line', count( $facr_whole ) === 1 && abs( $facr_whole[0]['total'] - 250.0 ) < 0.001 );
+  facr_it( 'the synthetic line targets nothing in particular', $facr_whole[0]['product_id'] === 0 && $facr_whole[0]['term_ids'] === [] );
+
+  // A non-WooCommerce provider sends item ids that are not product ids, so no
+  // product_cat lookup may happen for them.
+  $facr_foreign = \FACommissionRules\LineBuilder::build( [ [ 'item_id' => 101, 'subtotal' => 100.0 ] ], 'fluent_cart', 0, 100.0 );
+  facr_it( 'a foreign provider gets no category terms', $facr_foreign[0]['term_ids'] === [] );
+
+  // Term ancestry: the fixture product is filed under the child term only.
+  if ( Fluent::has_woo() && $facr_cat_child > 0 && $facr_product_id > 0 ) {
+    $map = \FACommissionRules\LineBuilder::term_map( $facr_product_id );
+    facr_it( 'term map includes the direct term at depth 0', ( $map['depths'][ $facr_cat_child ] ?? -1 ) === 0 );
+    facr_it( 'term map includes the ancestor at depth 1', ( $map['depths'][ $facr_cat_parent ] ?? -1 ) === 1 );
+    facr_it( 'term ids cover both levels', count( array_intersect( $map['ids'], [ $facr_cat_child, $facr_cat_parent ] ) ) === 2 );
+  } else {
+    echo "SKIP WooCommerce inactive: term ancestry not exercised\n";
+  }
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );
