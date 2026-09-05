@@ -86,6 +86,7 @@ final class Menu {
     }
 
     Fluent::enqueue_admin_styles();
+    wp_add_inline_style( 'facr-fa-admin', self::inline_css() );
 
     wp_register_script( 'facr-vue', FACR_URL . 'assets/vendor/vue.global.prod.js', [], '3.5.17', true );
     wp_register_script( 'facr-element-plus', FACR_URL . 'assets/vendor/element-plus.full.min.js', [ 'facr-vue' ], '2.9.11', true );
@@ -151,5 +152,18 @@ final class Menu {
   for ( var i = 0; i < tabs.length; i++ ) { tabs[ i ].classList.add( 'fa-navbar__link--active' ); }
 } )();
 JS;
+  }
+
+  /** Layout the app needs that Fluent's theme has no opinion on. Variables are theirs, so dark mode follows. */
+  public static function inline_css(): string {
+    return '.facr-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'
+      . '.facr-bulk-bar{border-top:1px solid var(--fla-primary-border);padding-top:12px;padding-bottom:12px}'
+      . '.facr-badge-note,.facr-readonly,.facr-help{font-size:12px;color:var(--fla-secondary-text);line-height:1.4}'
+      . '.facr-badge-note{margin-top:4px}'
+      . '.facr-help{margin-top:4px;width:100%}'
+      . '.facr-result{margin:16px 0 0;font-size:14px;color:var(--fla-primary-text)}'
+      . '.facr-money,.facr-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}'
+      . '.fa_table_wrap{overflow-x:auto}'
+      . '@media (max-width:640px){.fa-affiliate-body-actions-bar{flex-direction:column;align-items:stretch;gap:12px}.facr-filters .el-select,.facr-filters .el-input{width:100%!important}}';
   }
 }
