@@ -489,8 +489,17 @@ try {
   ];
   // 12.5 is what Fluent computes here: 10% of A plus its 5% base on the other 50.
   // Ours: 10 on A, 6 on C, and the 5% base on the 20 nobody claimed — 17, not 17.67.
+  // That exact figure only comes from Pro's RecurringReferral::getBaseRenewalCommission();
+  // without Pro the fallback prorates Fluent's own blended 12.5 onto the remainder instead.
   $facr_blended = apply_filters( 'fluent_affiliate/recurring_commission', 12.5, $facr_blend_ctx );
-  facr_it( 'renewal: the remainder is priced from the base rate, not the blended amount', abs( (float) $facr_blended - 17.0 ) < 0.001 );
+  if ( \FACommissionRules\Fluent::has_pro() ) {
+    facr_it( 'renewal: the remainder is priced from the base rate, not the blended amount', abs( (float) $facr_blended - 17.0 ) < 0.001 );
+  } else {
+    // Resolver::resolve() rounds the summed amount once, at the end, to 2 decimals.
+    $facr_expected_fallback = round( 10.0 + 6.0 + 12.5 * ( 20.0 / 150.0 ), 2 );
+    echo "SKIP Fluent Affiliate Pro inactive: exact renewal base rate not exercised\n";
+    facr_it( 'renewal: the remainder is priced by the proration fallback without Pro', abs( (float) $facr_blended - $facr_expected_fallback ) < 0.001 );
+  }
 
   // The renewal referral row is built after the pricing filter has run, so the
   // stamp can only be written on the referral_data pass.
@@ -505,7 +514,9 @@ try {
   );
   $facr_renewal_out = apply_filters( 'fluent_affiliate/referral_data', $facr_renewal_row, 'woo' );
   facr_it( 'renewal: the referral carries the audit stamp', isset( $facr_renewal_out['settings']['fa_commission_rules']['version'] ) );
-  facr_it( 'renewal: stamping never rewrites the amount', abs( (float) $facr_renewal_out['amount'] - 17.0 ) < 0.001 );
+  // Compared against the amount the recurring_commission filter actually produced above,
+  // rather than a literal figure, so this holds whether or not Pro's exact rate is reachable.
+  facr_it( 'renewal: stamping never rewrites the amount', abs( (float) $facr_renewal_out['amount'] - (float) $facr_blended ) < 0.001 );
   facr_it( 'renewal: the description gains a rules note', strpos( (string) $facr_renewal_out['description'], 'rules:' ) !== false );
 
   $facr_renewal_again = apply_filters( 'fluent_affiliate/referral_data', $facr_renewal_row, 'woo' );

@@ -428,9 +428,13 @@ final class RuleForm {
       var l10n = <?php
         echo wp_json_encode(
           [
+            /* translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Coffee") */
             'sentence' => __( '%1$s earns %2$s on %3$s.', 'fa-commission-rules' ),
+            /* translators: %s: the start date the rule takes effect */
             'from'     => __( ' From %s.', 'fa-commission-rules' ),
+            /* translators: %s: the date the rule stops applying */
             'until'    => __( ' Until %s.', 'fa-commission-rules' ),
+            /* translators: %1$s: start date, %2$s: end date */
             'between'  => __( ' From %1$s to %2$s.', 'fa-commission-rules' ),
           ],
           JSON_HEX_TAG | JSON_HEX_AMP
