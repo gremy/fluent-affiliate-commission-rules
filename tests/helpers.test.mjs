@@ -63,7 +63,7 @@ test( 'sortRules puts the most specific first, then the newest, without mutating
 test( 'filterRules matches scope, target, status and a case-insensitive query', () => {
   const rules = [
     rule( { id: '1', scope_type: 'affiliate', labels: { scope: 'Affiliate: Jane Doe (#12)', target: 'All products', rate: '10%', window: 'Always', sentence: '' }, note: 'Year-1 deal' } ),
-    rule( { id: '2', scope_type: 'group', target_type: 'category', status: 'inactive', labels: { scope: 'Group: Gold', target: 'Category: Coffee', rate: '5%', window: 'Always', sentence: '' } } ),
+    rule( { id: '2', scope_type: 'group', target_type: 'category', status: 'inactive', labels: { scope: 'Group: Gold', target: 'Category: Accessories', rate: '5%', window: 'Always', sentence: '' } } ),
     rule( { id: '3', readonly: true } )
   ];
   assert.deepEqual( H.filterRules( rules, { scope: '', target: '', status: '', q: '' } ).map( r => r.id ), [ '1', '2', '3' ] );
@@ -71,7 +71,7 @@ test( 'filterRules matches scope, target, status and a case-insensitive query', 
   assert.deepEqual( H.filterRules( rules, { target: 'all' } ).map( r => r.id ), [ '1', '3' ] );
   assert.deepEqual( H.filterRules( rules, { status: 'inactive' } ).map( r => r.id ), [ '2' ] );
   assert.deepEqual( H.filterRules( rules, { q: 'jane' } ).map( r => r.id ), [ '1' ] );
-  assert.deepEqual( H.filterRules( rules, { q: 'COFFEE' } ).map( r => r.id ), [ '2' ] );
+  assert.deepEqual( H.filterRules( rules, { q: 'ACCESSORIES' } ).map( r => r.id ), [ '2' ] );
   assert.deepEqual( H.filterRules( rules, { q: 'year-1' } ).map( r => r.id ), [ '1' ] );
   assert.deepEqual( H.filterRules( rules, { q: 'nothing here' } ), [] );
 } );
@@ -130,4 +130,29 @@ test( 'presetFirst12Months ends the day before the anniversary', () => {
 
 test( 'ymd zero-pads', () => {
   assert.equal( H.ymd( new Date( 2026, 0, 7 ) ), '2026-01-07' );
+} );
+
+test( 'parseYmd builds a local date from Y-m-d parts, not a UTC one', () => {
+  const d = H.parseYmd( '2026-09-05' );
+  assert.equal( d.getFullYear(), 2026 );
+  assert.equal( d.getMonth(), 8 );
+  assert.equal( d.getDate(), 5 );
+} );
+
+test( 'statusOf: inactive rules stay inactive regardless of dates', () => {
+  assert.equal( H.statusOf( rule( { status: 'inactive' } ), '2026-09-05' ), 'inactive' );
+  assert.equal( H.statusOf( rule( { status: 'inactive', starts_at: '2026-01-01' } ), '2026-09-05' ), 'inactive' );
+} );
+
+test( 'statusOf: an active rule starting after today is scheduled', () => {
+  assert.equal( H.statusOf( rule( { starts_at: '2026-10-01' } ), '2026-09-05' ), 'scheduled' );
+} );
+
+test( 'statusOf: an active rule that ended before today is expired', () => {
+  assert.equal( H.statusOf( rule( { ends_at: '2026-08-01' } ), '2026-09-05' ), 'expired' );
+} );
+
+test( 'statusOf: an active rule within its window (or with no window) is effective', () => {
+  assert.equal( H.statusOf( rule(), '2026-09-05' ), 'effective' );
+  assert.equal( H.statusOf( rule( { starts_at: '2026-01-01', ends_at: '2026-12-31' } ), '2026-09-05' ), 'effective' );
 } );

@@ -148,18 +148,37 @@
     return date.getFullYear() + '-' + pad( date.getMonth() + 1 ) + '-' + pad( date.getDate() );
   }
 
+  /** Parses a 'YYYY-MM-DD' string into a local Date; avoids the UTC shift `new Date(string)` does. */
+  function parseYmd( value ) {
+    var parts = String( value ).split( '-' );
+    return new Date( Number( parts[ 0 ] ), Number( parts[ 1 ] ) - 1, Number( parts[ 2 ] ) );
+  }
+
   /** Today through the day before the anniversary, in local calendar time. */
   function presetFirst12Months( today ) {
-    var start;
-    if ( today instanceof Date ) {
-      start = new Date( today.getFullYear(), today.getMonth(), today.getDate() );
-    } else {
-      var parts = String( today ).split( '-' );
-      start = new Date( Number( parts[ 0 ] ), Number( parts[ 1 ] ) - 1, Number( parts[ 2 ] ) );
-    }
+    var start = today instanceof Date
+      ? new Date( today.getFullYear(), today.getMonth(), today.getDate() )
+      : parseYmd( today );
     var end = new Date( start.getFullYear() + 1, start.getMonth(), start.getDate() );
     end.setDate( end.getDate() - 1 );
     return { starts_at: ymd( start ), ends_at: ymd( end ) };
+  }
+
+  /**
+   * The status-column badge state, independent of the shadow/tie note.
+   * 'YYYY-MM-DD' string comparison is safe: the format is fixed-width.
+   */
+  function statusOf( rule, today ) {
+    if ( ! rule || rule.status !== 'active' ) {
+      return 'inactive';
+    }
+    if ( rule.starts_at && rule.starts_at > today ) {
+      return 'scheduled';
+    }
+    if ( rule.ends_at && rule.ends_at < today ) {
+      return 'expired';
+    }
+    return 'effective';
   }
 
   return {
@@ -171,6 +190,8 @@
     formatRate: formatRate,
     sentence: sentence,
     presetFirst12Months: presetFirst12Months,
+    parseYmd: parseYmd,
+    statusOf: statusOf,
     ymd: ymd
   };
 } );

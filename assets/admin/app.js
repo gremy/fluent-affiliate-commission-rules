@@ -18,6 +18,8 @@
   }
 
   var MONEY = { money_template: cfg.money_template || '%s', decimal_separator: cfg.decimal_separator || '.' };
+  /** Site-local 'YYYY-MM-DD', for status comparisons and the year-preset button. */
+  var TODAY = cfg.today || H.ymd( new Date() );
 
   /** wp_localize_script casts top-level scalars to strings: '1' means true. */
   function flag( value ) {
@@ -33,7 +35,12 @@
     return url.toString();
   }
 
-  /** fetch() with the wp_rest nonce; resolves with parsed JSON, rejects with {status, data}. */
+  /**
+   * fetch() with the wp_rest nonce; resolves with parsed JSON, rejects with
+   * {status, data}. A non-JSON body (an HTML login/proxy page, typically with
+   * a 200 status) must never be treated as a successful empty response, so
+   * the content-type and the parse itself are both checked before `ok`.
+   */
   function api( path, options ) {
     options = options || {};
     var headers = { 'X-WP-Nonce': cfg.nonce, Accept: 'application/json' };
@@ -43,9 +50,11 @@
       init.body = JSON.stringify( options.body );
     }
     return window.fetch( restUrl( path, options.query ), init ).then( function ( response ) {
-      return response.json().catch( function () {
-        return {};
-      } ).then( function ( data ) {
+      var contentType = response.headers.get( 'Content-Type' ) || '';
+      if ( contentType.indexOf( 'application/json' ) === -1 ) {
+        throw new Error( i18n.error_generic );
+      }
+      return response.json().then( function ( data ) {
         if ( response.ok ) {
           return data;
         }
@@ -53,6 +62,8 @@
         error.status = response.status;
         error.data   = data || {};
         throw error;
+      }, function () {
+        throw new Error( i18n.error_generic );
       } );
     } );
   }
@@ -246,6 +257,7 @@
         loading: true,
         loadError: '',
         productSearchSeq: 0,
+        editorSeq: 0,
         rules: [],
         shadow: {},
         tie: {},
@@ -398,7 +410,14 @@
         if ( row.readonly ) {
           return 'woo';
         }
-        if ( row.status !== 'active' ) {
+        var status = H.statusOf( row, TODAY );
+        if ( status === 'scheduled' ) {
+          return 'pending';
+        }
+        if ( status === 'expired' ) {
+          return 'expired';
+        }
+        if ( status === 'inactive' ) {
           return 'inactive';
         }
         return this.badge( row ).kind ? 'warning' : 'success';
@@ -407,7 +426,14 @@
         if ( row.readonly ) {
           return i18n.status_global;
         }
-        return row.status === 'active' ? i18n.status_effective : i18n.status_inactive;
+        var status = H.statusOf( row, TODAY );
+        if ( status === 'scheduled' ) {
+          return i18n.status_scheduled || i18n.status_effective;
+        }
+        if ( status === 'expired' ) {
+          return i18n.status_expired || i18n.status_effective;
+        }
+        return status === 'inactive' ? i18n.status_inactive : i18n.status_effective;
       },
       remove: function ( row ) {
         var vm = this;
@@ -452,6 +478,11 @@
       },
       openEditor: function ( rule ) {
         var editor = this.editor;
+        // A fresh opening (or a reopen after cancel) starts its own session,
+        // so a save or product search still in flight from a previous
+        // opening can no longer act on this one.
+        this.editorSeq++;
+        this.productSearchSeq++;
         editor.errors         = {};
         editor.productQuery   = '';
         editor.productOptions = [];
@@ -482,6 +513,8 @@
         editor.open = true;
       },
       closeEditor: function () {
+        this.editorSeq++;
+        this.productSearchSeq++;
         this.editor.open = false;
       },
       searchProducts: function ( query ) {
@@ -500,8 +533,8 @@
         editor.productLoading = true;
         var seq = ++vm.productSearchSeq;
         api( '/products', { query: { search: editor.productQuery } } ).then( function ( found ) {
-          if ( seq !== vm.productSearchSeq ) {
-            return; // a newer search already landed; a slow reply must not overwrite it
+          if ( seq !== vm.productSearchSeq || ! editor.open ) {
+            return; // a newer search already landed, or the drawer closed; a slow reply must not overwrite it
           }
           var seen = {};
           keep.forEach( function ( product ) {
@@ -516,7 +549,7 @@
           editor.productOptions = keep;
           editor.productLoading = false;
         }, function ( error ) {
-          if ( seq !== vm.productSearchSeq ) {
+          if ( seq !== vm.productSearchSeq || ! editor.open ) {
             return;
           }
           editor.productLoading = false;
@@ -524,7 +557,7 @@
         } );
       },
       presetYear: function () {
-        var preset = H.presetFirst12Months( new Date() );
+        var preset = H.presetFirst12Months( H.parseYmd( TODAY ) );
         this.editor.form.starts_at = preset.starts_at;
         this.editor.form.ends_at   = preset.ends_at;
       },
@@ -535,6 +568,10 @@
         if ( editor.saving ) {
           return;
         }
+        // Captured now: if the drawer is closed and reopened (or closed for
+        // good) before this request lands, the response below must not close
+        // or reload on behalf of a session that is no longer current.
+        var session = vm.editorSeq;
         editor.saving = true;
         editor.errors = {};
         var body = {
@@ -554,12 +591,14 @@
         };
         api( '/rules', { method: 'POST', body: body } ).then( function ( data ) {
           editor.saving = false;
-          editor.open   = false;
           notify( 'success', H.sprintf( i18n.rule_saved, data.rule && data.rule.labels ? data.rule.labels.sentence : '' ) );
           if ( data.tie && data.tie.length ) {
             EP.ElMessageBox.alert( i18n.tie_warning, i18n.tie_title, { type: 'warning', confirmButtonText: i18n.confirm_ok } ).catch( function () {} );
           }
-          vm.load();
+          if ( session === vm.editorSeq ) {
+            editor.open = false;
+            vm.load();
+          }
         }, function ( error ) {
           editor.saving = false;
           if ( error.status === 422 && error.data && error.data.errors ) {
