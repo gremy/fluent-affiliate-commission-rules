@@ -2,7 +2,8 @@
 declare(strict_types=1);
 /**
  * The admin page shell: Fluent's chrome is printed, our assets are enqueued on our page only.
- * Run: wp --path=/path/to/wp eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-admin.php
+ * Run: wp --path=/path/to/wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-admin.php";'
+ * (wp eval-file fatals: strict_types must be the file's first statement, but WP-CLI wraps it.)
  */
 
 use FACommissionRules\Admin\Menu;

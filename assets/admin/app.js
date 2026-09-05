@@ -127,7 +127,10 @@
     '        <el-button size="small" type="danger" plain @click="bulk(\'delete\')">{{ i18n.delete }}</el-button>',
     '      </span>',
     '    </div>',
-    '    <div class="fa_empty_state" v-if="!loading && !rules.length">',
+    '    <div class="fa_empty_state" v-if="!loading && loadError">',
+    '      <el-alert type="error" :closable="false" show-icon :title="loadError"></el-alert>',
+    '    </div>',
+    '    <div class="fa_empty_state" v-else-if="!loading && !rules.length">',
     '      <el-empty :description="emptyText">',
     '        <el-button type="primary" @click="openEditor()">{{ i18n.add_first }}</el-button>',
     '      </el-empty>',
@@ -241,6 +244,8 @@
       return {
         i18n: i18n,
         loading: true,
+        loadError: '',
+        productSearchSeq: 0,
         rules: [],
         shadow: {},
         tie: {},
@@ -356,8 +361,10 @@
           vm.tie         = data.tie || {};
           vm.defaultRate = data.default_rate || vm.defaultRate;
           vm.loading     = false;
+          vm.loadError   = '';
         }, function ( error ) {
-          vm.loading = false;
+          vm.loading   = false;
+          vm.loadError = error.message || i18n.error_generic;
           notify( 'error', error.message );
         } );
       },
@@ -435,7 +442,7 @@
             return;
           }
           api( '/rules/bulk', { method: 'POST', body: { action: action, ids: ids } } ).then( function ( data ) {
-            notify( 'success', data.message );
+            notify( 'success', data.message || i18n.bulk_done );
             vm.selected = [];
             vm.load();
           }, function ( error ) {
@@ -478,6 +485,7 @@
         this.editor.open = false;
       },
       searchProducts: function ( query ) {
+        var vm     = this;
         var editor = this.editor;
         var form   = this.editor.form;
         editor.productQuery = String( query || '' ).trim();
@@ -490,7 +498,11 @@
           return;
         }
         editor.productLoading = true;
+        var seq = ++vm.productSearchSeq;
         api( '/products', { query: { search: editor.productQuery } } ).then( function ( found ) {
+          if ( seq !== vm.productSearchSeq ) {
+            return; // a newer search already landed; a slow reply must not overwrite it
+          }
           var seen = {};
           keep.forEach( function ( product ) {
             seen[ product.id ] = true;
@@ -504,6 +516,9 @@
           editor.productOptions = keep;
           editor.productLoading = false;
         }, function ( error ) {
+          if ( seq !== vm.productSearchSeq ) {
+            return;
+          }
           editor.productLoading = false;
           notify( 'error', error.message );
         } );

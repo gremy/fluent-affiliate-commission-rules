@@ -130,13 +130,7 @@ final class Fluent {
       );
     }
 
-    $user  = $affiliate->user;
-    $label = $user ? trim( (string) $user->full_name ) : '';
-    if ( $label === '' && $user ) {
-      $label = trim( (string) $user->user_email );
-    }
-
-    return $label !== '' ? $label . ' (#' . $id . ')' : '#' . $id;
+    return self::label_for( $affiliate );
   }
 
   /**
@@ -151,15 +145,25 @@ final class Fluent {
     // switch to remote search only if a store actually outgrows this.
     $out = [];
     foreach ( Affiliate::with( 'user' )->orderBy( 'id', 'DESC' )->limit( $limit )->get() as $affiliate ) {
-      $id    = (int) $affiliate->id;
-      $user  = $affiliate->user;
-      $label = $user ? trim( (string) $user->full_name ) : '';
-      if ( $label === '' && $user ) {
-        $label = trim( (string) $user->user_email );
-      }
-      $out[] = [ 'id' => $id, 'label' => $label !== '' ? $label . ' (#' . $id . ')' : '#' . $id ];
+      $out[] = [ 'id' => (int) $affiliate->id, 'label' => self::label_for( $affiliate ) ];
     }
     return $out;
+  }
+
+  /**
+   * The "Name (#id) / email (#id) / #id" label shared by affiliate_label() and
+   * affiliates(): full name, else the account email, else the bare id.
+   *
+   * @param object $affiliate an Affiliate model with its `user` relation loaded (or loadable)
+   */
+  private static function label_for( $affiliate ): string {
+    $id    = (int) $affiliate->id;
+    $user  = $affiliate->user;
+    $label = $user ? trim( (string) $user->full_name ) : '';
+    if ( $label === '' && $user ) {
+      $label = trim( (string) $user->user_email );
+    }
+    return $label !== '' ? $label . ' (#' . $id . ')' : '#' . $id;
   }
 
   /** True when Fluent is configured to exclude tax from commissionable totals. */

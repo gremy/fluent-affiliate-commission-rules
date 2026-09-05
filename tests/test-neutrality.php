@@ -3,7 +3,8 @@ declare(strict_types=1);
 /**
  * Brand-neutrality and text-domain guard for the published plugin.
  * Run: php tests/test-neutrality.php
- *  or: wp --path=/Users/gremy/sites/ovride/ovride_woo eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-neutrality.php
+ *  or: wp --path=/path/to/wordpress eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-neutrality.php";'
+ * (wp eval-file fatals: strict_types must be the file's first statement, but WP-CLI wraps it.)
  */
 
 $facr_root = dirname( __DIR__ );
@@ -66,6 +67,17 @@ foreach ( $files as $file ) {
   }
 }
 facr_assert( 'every translated string uses the fa-commission-rules domain: ' . implode( ', ', $wrong_domain ), $wrong_domain === [] );
+
+// The needle is built from two parts so this very check does not trip on its
+// own source — no basename exclusion needed, unlike the "ovride" scan above.
+$userpath_needle = '/' . 'Users' . '/';
+$userpaths        = [];
+foreach ( $files as $file ) {
+  if ( strpos( (string) file_get_contents( $file ), $userpath_needle ) !== false ) {
+    $userpaths[] = $file;
+  }
+}
+facr_assert( 'no developer home-directory paths leaked into the plugin: ' . implode( ', ', $userpaths ), $userpaths === [] );
 
 $header = (string) file_get_contents( $facr_root . '/fluent-affiliate-commission-rules.php' );
 facr_assert( 'plugin header declares the text domain', strpos( $header, 'Text Domain:       fa-commission-rules' ) !== false );

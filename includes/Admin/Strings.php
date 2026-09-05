@@ -69,6 +69,7 @@ final class Strings {
       /* translators: %s: the store's inherited default commission rate */
       'confirm_deactivate'   => __( 'Deactivate the selected rules? For those products each affiliate reverts to the next matching rule, or to the inherited default rate of %s.', 'fa-commission-rules' ),
       'deleted'              => __( 'Rule deleted.', 'fa-commission-rules' ),
+      'bulk_done'            => __( 'Rules updated.', 'fa-commission-rules' ),
       /* translators: %s: what the saved rule does, in plain words */
       'rule_saved'           => __( 'Rule saved: %s', 'fa-commission-rules' ),
       'tie_title'            => __( 'Rule saved, with a conflict', 'fa-commission-rules' ),

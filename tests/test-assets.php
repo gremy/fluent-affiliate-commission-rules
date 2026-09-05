@@ -3,7 +3,8 @@ declare(strict_types=1);
 /**
  * Vendored front-end assets: present, and pinned to the versions the plugin was verified with.
  * Run: php tests/test-assets.php
- *  or: wp --path=/path/to/wp eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-assets.php
+ *  or: wp --path=/path/to/wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-assets.php";'
+ * (wp eval-file fatals: strict_types must be the file's first statement, but WP-CLI wraps it.)
  */
 
 $facr_vendor = dirname( __DIR__ ) . '/assets/vendor/';

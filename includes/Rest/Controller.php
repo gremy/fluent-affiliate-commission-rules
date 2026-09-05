@@ -249,7 +249,7 @@ final class Controller {
       return new WP_Error(
         'facr_readonly',
         __( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ),
-        [ 'status' => 400 ]
+        [ 'status' => 403 ]
       );
     }
     if ( ! Store::delete( $id ) ) {

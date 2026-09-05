@@ -156,7 +156,15 @@ JS;
 
   /** Layout the app needs that Fluent's theme has no opinion on. Variables are theirs, so dark mode follows. */
   public static function inline_css(): string {
-    return '.facr-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'
+    return
+      // Fluent offsets its own .fa-navbar for the WP admin bar (32px, 46px under
+      // 783px) but Element Plus's drawer/dialog overlay is a plain fixed
+      // position:0 layer with no such opinion, so it renders under the admin
+      // bar and hides the drawer's title/close button. Push the overlay down
+      // to clear the admin bar on our page only.
+      'body.toplevel_page_fluent-affiliate .el-overlay{top:32px}'
+      . '@media screen and (max-width:782px){body.toplevel_page_fluent-affiliate .el-overlay{top:46px}}'
+      . '.facr-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'
       . '.facr-bulk-bar{border-top:1px solid var(--fla-primary-border);padding-top:12px;padding-bottom:12px}'
       . '.facr-badge-note,.facr-readonly,.facr-help{font-size:12px;color:var(--fla-secondary-text);line-height:1.4}'
       . '.facr-badge-note{margin-top:4px}'

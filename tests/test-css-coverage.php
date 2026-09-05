@@ -5,7 +5,8 @@ declare(strict_types=1);
  * Affiliate's own app.min.css and admin.css.
  * Also: no console.log left behind, and strict mode is on.
  * Run: php tests/test-css-coverage.php
- *  or: wp --path=/path/to/wp eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-css-coverage.php
+ *  or: wp --path=/path/to/wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-css-coverage.php";'
+ * (wp eval-file fatals: strict_types must be the file's first statement, but WP-CLI wraps it.)
  */
 
 $facr_root = dirname( __DIR__ );

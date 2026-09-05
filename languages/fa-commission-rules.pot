@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-05T18:37:13+00:00\n"
+"POT-Creation-Date: 2026-09-05T19:07:27+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: fa-commission-rules\n"
@@ -84,8 +84,8 @@ msgid "Group"
 msgstr ""
 
 #: includes/Admin/Strings.php:30
-#: includes/Admin/Strings.php:86
-#: includes/Admin/Strings.php:122
+#: includes/Admin/Strings.php:87
+#: includes/Admin/Strings.php:123
 #: includes/Admin/Widgets.php:61
 #: includes/Labels.php:48
 msgid "Everyone"
@@ -104,7 +104,7 @@ msgid "A category"
 msgstr ""
 
 #: includes/Admin/Strings.php:34
-#: includes/Admin/Strings.php:91
+#: includes/Admin/Strings.php:92
 #: includes/Labels.php:73
 msgid "All products"
 msgstr ""
@@ -114,13 +114,13 @@ msgid "Any status"
 msgstr ""
 
 #: includes/Admin/Strings.php:36
-#: includes/Admin/Strings.php:107
+#: includes/Admin/Strings.php:108
 msgid "Active"
 msgstr ""
 
 #: includes/Admin/Strings.php:37
 #: includes/Admin/Strings.php:47
-#: includes/Admin/Strings.php:108
+#: includes/Admin/Strings.php:109
 msgid "Inactive"
 msgstr ""
 
@@ -148,7 +148,7 @@ msgid "Window"
 msgstr ""
 
 #: includes/Admin/Strings.php:43
-#: includes/Admin/Strings.php:106
+#: includes/Admin/Strings.php:107
 msgid "Status"
 msgstr ""
 
@@ -225,7 +225,7 @@ msgid "Yes, continue"
 msgstr ""
 
 #: includes/Admin/Strings.php:64
-#: includes/Admin/Strings.php:111
+#: includes/Admin/Strings.php:112
 msgid "Cancel"
 msgstr ""
 
@@ -251,178 +251,182 @@ msgstr ""
 msgid "Rule deleted."
 msgstr ""
 
+#: includes/Admin/Strings.php:72
+msgid "Rules updated."
+msgstr ""
+
 #. translators: %s: what the saved rule does, in plain words
-#: includes/Admin/Strings.php:73
+#: includes/Admin/Strings.php:74
 #, php-format
 msgid "Rule saved: %s"
 msgstr ""
 
-#: includes/Admin/Strings.php:74
+#: includes/Admin/Strings.php:75
 msgid "Rule saved, with a conflict"
 msgstr ""
 
-#: includes/Admin/Strings.php:75
+#: includes/Admin/Strings.php:76
 msgid "Another active rule is exactly as specific, so the newer of the two wins. Look for the Conflict flag in the list."
 msgstr ""
 
-#: includes/Admin/Strings.php:76
+#: includes/Admin/Strings.php:77
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/Admin/Strings.php:79
+#: includes/Admin/Strings.php:80
 msgid "Add commission rule"
 msgstr ""
 
-#: includes/Admin/Strings.php:80
+#: includes/Admin/Strings.php:81
 msgid "Edit commission rule"
 msgstr ""
 
-#: includes/Admin/Strings.php:81
+#: includes/Admin/Strings.php:82
 msgid "Applies to"
 msgstr ""
 
-#: includes/Admin/Strings.php:82
+#: includes/Admin/Strings.php:83
 msgid "For the products"
 msgstr ""
 
-#: includes/Admin/Strings.php:83
+#: includes/Admin/Strings.php:84
 msgid "Commission"
 msgstr ""
 
-#: includes/Admin/Strings.php:84
+#: includes/Admin/Strings.php:85
 msgid "Active period"
 msgstr ""
 
-#: includes/Admin/Strings.php:85
+#: includes/Admin/Strings.php:86
 msgid "Internal note"
 msgstr ""
 
-#: includes/Admin/Strings.php:87
+#: includes/Admin/Strings.php:88
 msgid "An affiliate group"
 msgstr ""
 
-#: includes/Admin/Strings.php:88
+#: includes/Admin/Strings.php:89
 msgid "One affiliate"
 msgstr ""
 
-#: includes/Admin/Strings.php:89
+#: includes/Admin/Strings.php:90
 msgid "Choose a group"
 msgstr ""
 
-#: includes/Admin/Strings.php:90
+#: includes/Admin/Strings.php:91
 msgid "Choose an affiliate"
 msgstr ""
 
-#: includes/Admin/Strings.php:92
+#: includes/Admin/Strings.php:93
 msgid "A product category"
 msgstr ""
 
-#: includes/Admin/Strings.php:93
+#: includes/Admin/Strings.php:94
 msgid "A product or variation"
 msgstr ""
 
-#: includes/Admin/Strings.php:94
+#: includes/Admin/Strings.php:95
 msgid "Choose categories"
 msgstr ""
 
-#: includes/Admin/Strings.php:95
+#: includes/Admin/Strings.php:96
 msgid "Search for a product or variation…"
 msgstr ""
 
-#: includes/Admin/Strings.php:96
+#: includes/Admin/Strings.php:97
 msgid "Type at least two characters"
 msgstr ""
 
-#: includes/Admin/Strings.php:97
+#: includes/Admin/Strings.php:98
 msgid "No products found"
 msgstr ""
 
-#: includes/Admin/Strings.php:98
+#: includes/Admin/Strings.php:99
 msgid "% of the line total"
 msgstr ""
 
-#: includes/Admin/Strings.php:99
+#: includes/Admin/Strings.php:100
 msgid "flat, per order line"
 msgstr ""
 
-#: includes/Admin/Strings.php:100
+#: includes/Admin/Strings.php:101
 msgid "Applied per matching order line, to the same line totals Fluent Affiliate commissions — so your tax and shipping settings are respected."
 msgstr ""
 
-#: includes/Admin/Strings.php:101
+#: includes/Admin/Strings.php:102
 msgid "From"
 msgstr ""
 
-#: includes/Admin/Strings.php:102
+#: includes/Admin/Strings.php:103
 msgid "Until"
 msgstr ""
 
-#: includes/Admin/Strings.php:103
+#: includes/Admin/Strings.php:104
 msgid "First 12 months"
 msgstr ""
 
-#: includes/Admin/Strings.php:104
+#: includes/Admin/Strings.php:105
 msgid "Leave both empty for a rule that never expires."
 msgstr ""
 
-#: includes/Admin/Strings.php:105
+#: includes/Admin/Strings.php:106
 msgid "Why this rule exists. Nobody remembers in a year."
 msgstr ""
 
-#: includes/Admin/Strings.php:109
+#: includes/Admin/Strings.php:110
 msgid "Result:"
 msgstr ""
 
-#: includes/Admin/Strings.php:110
+#: includes/Admin/Strings.php:111
 msgid "Save rule"
 msgstr ""
 
 #. translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Coffee")
-#: includes/Admin/Strings.php:115
+#: includes/Admin/Strings.php:116
 #, php-format
 msgid "%1$s earns %2$s on %3$s."
 msgstr ""
 
 #. translators: %s: the start date the rule takes effect
-#: includes/Admin/Strings.php:117
+#: includes/Admin/Strings.php:118
 #, php-format
 msgid " From %s."
 msgstr ""
 
 #. translators: %s: the date the rule stops applying
-#: includes/Admin/Strings.php:119
+#: includes/Admin/Strings.php:120
 #, php-format
 msgid " Until %s."
 msgstr ""
 
 #. translators: %1$s: start date, %2$s: end date
-#: includes/Admin/Strings.php:121
+#: includes/Admin/Strings.php:122
 #, php-format
 msgid " From %1$s to %2$s."
 msgstr ""
 
-#: includes/Admin/Strings.php:123
+#: includes/Admin/Strings.php:124
 msgid "This group"
 msgstr ""
 
-#: includes/Admin/Strings.php:124
+#: includes/Admin/Strings.php:125
 msgid "This affiliate"
 msgstr ""
 
-#: includes/Admin/Strings.php:125
+#: includes/Admin/Strings.php:126
 msgid "all products"
 msgstr ""
 
-#: includes/Admin/Strings.php:126
+#: includes/Admin/Strings.php:127
 msgid "the chosen categories"
 msgstr ""
 
-#: includes/Admin/Strings.php:127
+#: includes/Admin/Strings.php:128
 msgid "the chosen products"
 msgstr ""
 
 #. translators: %s: a flat commission amount, per order line, already in store currency
-#: includes/Admin/Strings.php:129
+#: includes/Admin/Strings.php:130
 #: includes/Labels.php:101
 #, php-format
 msgid "%s flat"

@@ -217,7 +217,8 @@ final class Store {
         'rate_type'   => $rate_type,
         'starts_at'   => $starts_at,
         'ends_at'     => $ends_at,
-        'note'        => sanitize_text_field( (string) ( $input['note'] ?? '' ) ),
+        // Capped to match the editor's maxlength="200" — a hand-rolled POST must not store more.
+        'note'        => mb_substr( sanitize_text_field( (string) ( $input['note'] ?? '' ) ), 0, 200 ),
         'created_at'  => (string) ( $input['created_at'] ?? '' ) !== ''
           ? (string) $input['created_at']
           : gmdate( 'c' ),

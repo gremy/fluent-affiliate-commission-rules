@@ -3,9 +3,10 @@
 Per-affiliate and per-group commission rules for [Fluent Affiliate](https://fluentaffiliate.com),
 targeted at a product, a product category, or everything, with an optional date window.
 
-**Source:** [github.com/gremy/fluent-affiliate-commission-rules](https://github.com/gremy/fluent-affiliate-commission-rules)
-is a one-way mirror. This repository (a private monorepo) is the source of truth;
-changes land here first and are mirrored out by `bin/mirror-fa-commission-rules.sh`.
+**Source:** Developed in a private monorepo; this GitHub repository
+([github.com/gremy/fluent-affiliate-commission-rules](https://github.com/gremy/fluent-affiliate-commission-rules))
+is a one-way mirror of the plugin directory (changes are mirrored out by
+`bin/mirror-fa-commission-rules.sh`).
 
 > Independent third-party add-on. Not affiliated with, or endorsed by, WPManageNinja.
 
@@ -166,10 +167,13 @@ php tests/test-resolver.php                     # the engine, no WordPress neede
 php tests/test-assets.php                       # vendored Vue / Element Plus pins
 php tests/test-css-coverage.php                 # every rendered component is styled
 node --test tests/helpers.test.mjs              # pure JS helpers
-wp eval-file tests/test-integration.php         # end to end against Fluent
-wp eval-file tests/test-rest.php                # the REST API
-wp eval-file tests/test-admin.php               # the admin page shell
-wp eval-file tests/test-neutrality.php          # brand and text-domain guard
+
+# wp eval-file fatals on these (declare(strict_types=1) isn't the file's first
+# statement once WP-CLI wraps it), so require them through wp eval instead:
+wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-integration.php";'  # end to end against Fluent
+wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-rest.php";'         # the REST API
+wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-admin.php";'        # the admin page shell
+wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-neutrality.php";'   # brand and text-domain guard
 ```
 
 ## FAQ

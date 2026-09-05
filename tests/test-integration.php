@@ -2,7 +2,8 @@
 declare(strict_types=1);
 /**
  * WordPress + Fluent Affiliate integration tests for the commission-rules plugin.
- * Run: wp --path=/path/to/wp eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-integration.php
+ * Run: wp --path=/path/to/wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-integration.php";'
+ * (wp eval-file fatals: strict_types must be the file's first statement, but WP-CLI wraps it.)
  *
  * Creates its own affiliate, group and rules and removes them in a finally block.
  */
@@ -231,6 +232,10 @@ try {
 
   [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'starts_at' => '01/10/2026' ] );
   facr_it( 'dates must be Y-m-d', isset( $errors['starts_at'] ) );
+
+  // The editor's textarea has maxlength="200"; a hand-rolled POST must not store more.
+  [ $facr_long_note_rule ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'note' => str_repeat( 'a', 250 ) ] );
+  facr_it( 'note is capped at 200 characters', mb_strlen( $facr_long_note_rule['note'] ) === 200 );
 
   // ------------------------------------------------------------- cleanup ----
   Store::forget_affiliate( $facr_aff_id );

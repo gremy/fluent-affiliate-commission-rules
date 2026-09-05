@@ -101,7 +101,7 @@ test( 'formatRate mirrors Labels::rate_label', () => {
   assert.equal( H.formatRate( '10', 'percentage', ctx, i18n ), '10%' );
   assert.equal( H.formatRate( 10.126, 'percentage', ctx, i18n ), '10.13%' );
   assert.equal( H.formatRate( 3, 'flat', ctx, i18n ), '$ 3.00 flat' );
-  assert.equal( H.formatRate( 2.5, 'flat', { money_template: '%s lei', decimal_separator: ',' }, i18n ), '2,50 lei flat' );
+  assert.equal( H.formatRate( 2.5, 'flat', { money_template: '€ %s', decimal_separator: ',' }, i18n ), '€ 2,50 flat' );
   assert.equal( H.formatRate( '', 'percentage', ctx, i18n ), '0%' );
 } );
 

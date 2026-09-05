@@ -2,7 +2,8 @@
 declare(strict_types=1);
 /**
  * REST API tests for the commission-rules admin app, via rest_do_request().
- * Run: wp --path=/path/to/wp eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-rest.php
+ * Run: wp --path=/path/to/wp eval 'require WP_PLUGIN_DIR . "/fluent-affiliate-commission-rules/tests/test-rest.php";'
+ * (wp eval-file fatals: strict_types must be the file's first statement, but WP-CLI wraps it.)
  *
  * Creates its own users, affiliate, category and product and removes them in a finally block.
  */
@@ -265,7 +266,7 @@ try {
   facr_rest( 'an unknown id is refused on save with 404', $facr_r_gone->get_status() === 404 && ( $facr_r_gone->get_data()['code'] ?? '' ) === 'facr_missing' );
   facr_rest( 'refused saves wrote nothing', count( Store::all() ) === 1 );
 
-  facr_rest( 'DELETE of a fluent: id is 400', facr_rest_call( 'DELETE', '/rules/fluent:0' )->get_status() === 400 );
+  facr_rest( 'DELETE of a fluent: id is 403', facr_rest_call( 'DELETE', '/rules/fluent:0' )->get_status() === 403 );
   facr_rest( 'DELETE of an unknown id is 404', facr_rest_call( 'DELETE', '/rules/facr_does_not_exist' )->get_status() === 404 );
   $facr_r_del = facr_rest_call( 'DELETE', '/rules/' . $facr_r_new_id );
   facr_rest( 'DELETE of a real rule is 200 and names it', $facr_r_del->get_status() === 200 && ( $facr_r_del->get_data()['deleted'] ?? '' ) === $facr_r_new_id );
