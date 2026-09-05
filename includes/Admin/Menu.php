@@ -63,7 +63,7 @@ final class Menu {
     }
     $items[] = [
       'key'       => 'fa_commission_rules',
-      'label'     => __( 'Commission rules', 'fa-commission-rules' ),
+      'label'     => __( 'Commissions', 'fa-commission-rules' ),
       'permalink' => self::page_url(),
     ];
     return $items;
@@ -164,6 +164,7 @@ JS;
       . '.facr-result{margin:16px 0 0;font-size:14px;color:var(--fla-primary-text)}'
       . '.facr-money,.facr-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}'
       . '.fa_table_wrap{overflow-x:auto}'
-      . '@media (max-width:640px){.fa-affiliate-body-actions-bar{flex-direction:column;align-items:stretch;gap:12px}.facr-filters .el-select,.facr-filters .el-input{width:100%!important}}';
+      . '@media (max-width:640px){.fa-affiliate-body-actions-bar{flex-direction:column;align-items:stretch;gap:12px}.facr-filters .el-select,.facr-filters .el-input{width:100%!important}}'
+      . '.fa-navbar__link-wrapper[data-key="fa_commission_rules"] .fa-navbar__link{white-space:nowrap}';
   }
 }
