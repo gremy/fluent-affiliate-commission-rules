@@ -131,7 +131,7 @@ final class Controller {
       }
       $product = wc_get_product( $id );
       if ( $product ) {
-        $out[] = [ 'id' => $id, 'label' => (string) $product->get_formatted_name() ];
+        $out[] = [ 'id' => $id, 'label' => Labels::product_label( $product ) ];
       }
     }
     return new WP_REST_Response( $out );

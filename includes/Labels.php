@@ -148,6 +148,17 @@ final class Labels {
     );
   }
 
+  /**
+   * WC_Product::get_formatted_name() is plain text for a simple product but,
+   * for a variation, appends '<span class="description">...</span>' around
+   * its attribute list (see WC_Product_Variation::get_formatted_name()) —
+   * always, even when the list is empty. The admin app interpolates this as
+   * text, so the markup must never reach it raw.
+   */
+  public static function product_label( \WC_Product $product ): string {
+    return trim( wp_strip_all_tags( $product->get_formatted_name() ) );
+  }
+
   /** The store-wide rate an affiliate falls back to when nothing else matches. */
   public static function default_rate_label(): string {
     $rate      = (float) Fluent::referral_setting( 'rate', 0 );
@@ -166,7 +177,7 @@ final class Labels {
     // Same label the rule editor shows, so a variation reads as its variation
     // and not as its parent's title.
     $product = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
-    $title   = $product ? $product->get_formatted_name() : get_the_title( $id );
+    $title   = $product ? self::product_label( $product ) : get_the_title( $id );
     return (string) $title !== '' ? (string) $title : '#' . $id;
   }
 }

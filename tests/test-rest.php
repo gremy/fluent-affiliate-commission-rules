@@ -92,6 +92,15 @@ try {
       if ( $facr_r_wc ) {
         $facr_r_wc->save();
       }
+      // A variation of the search term's own product: WC_Product_Variation::get_formatted_name()
+      // always wraps its attribute list in a '<span class="description">' suffix (see abstract-wc-product.php
+      // vs. class-wc-product-variation.php), so this is what surfaces the raw-HTML bug in a search hit.
+      // Its SKU repeats the search phrase so the same LIKE search returns it.
+      $facr_r_var = new WC_Product_Variation();
+      $facr_r_var->set_parent_id( $facr_r_product );
+      $facr_r_var->set_sku( 'FACR Rest Product Zebra VAR ' . wp_rand() );
+      $facr_r_var->set_regular_price( '10' );
+      $facr_r_var->save();
     }
   }
 
@@ -190,6 +199,13 @@ try {
       }
     }
     facr_rest( 'GET /products finds the product by title with a label', $facr_r_hit );
+    $facr_r_labels_clean = true;
+    foreach ( (array) $facr_r_search->get_data() as $facr_r_p ) {
+      if ( strpos( (string) $facr_r_p['label'], '<' ) !== false ) {
+        $facr_r_labels_clean = false;
+      }
+    }
+    facr_rest( 'GET /products labels never contain raw HTML', $facr_r_labels_clean );
   } else {
     facr_rest( 'GET /products is an empty list without WooCommerce', $facr_r_search->get_data() === [] );
   }

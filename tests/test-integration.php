@@ -52,6 +52,7 @@ $facr_cat_child   = 0;
 $facr_product_id  = 0;
 $facr_product_b   = 0;
 $facr_product_c   = 0;
+$facr_product_var = 0;
 
 try {
   // ------------------------------------------------------------ fixtures ---
@@ -109,6 +110,14 @@ try {
     if ( $facr_cat_child > 0 ) {
       wp_set_object_terms( $facr_product_id, [ $facr_cat_child ], 'product_cat' );
     }
+    // WC_Product_Variation::get_formatted_name() always wraps its attribute list in a
+    // '<span class="description">' suffix (abstract-wc-product.php vs. class-wc-product-variation.php),
+    // which is what target_options() must strip.
+    $facr_var = new WC_Product_Variation();
+    $facr_var->set_parent_id( $facr_product_id );
+    $facr_var->set_regular_price( '10' );
+    $facr_var->save();
+    $facr_product_var = $facr_var->get_id();
   }
 
   // Fluent's own global rate tables would otherwise price these test orders from
@@ -781,6 +790,8 @@ try {
   facr_it( 'target_options names the product with its id', ( $facr_topt[0]['id'] ?? 0 ) === $facr_product_id && strpos( (string) ( $facr_topt[0]['label'] ?? '' ), 'FACR Test Product A' ) !== false );
   $facr_copt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) );
   facr_it( 'target_options names the category', strpos( (string) ( $facr_copt[0]['label'] ?? '' ), 'FACR Child' ) !== false );
+  $facr_vopt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_var ] ] ) );
+  facr_it( 'target_options strips HTML from a variation label', strpos( (string) ( $facr_vopt[0]['label'] ?? '' ), '<' ) === false );
   // Widgets must have moved off RulesPage: after Task 9 that class no longer exists.
   facr_it( 'Widgets no longer calls RulesPage', strpos( (string) file_get_contents( FACR_DIR . 'includes/Admin/Widgets.php' ), 'RulesPage::' ) === false );
 
