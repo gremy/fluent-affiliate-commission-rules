@@ -24,6 +24,9 @@ final class Plugin {
     // Widgets stays global: portal_notice_html renders on the front end.
     ( new Admin\Widgets() )->register();
 
+    // The REST API is global too: rest_api_init fires outside is_admin().
+    ( new Rest\Controller() )->register();
+
     if ( is_admin() ) {
       ( new Admin\Menu() )->register();
       ( new Admin\RuleForm() )->register();

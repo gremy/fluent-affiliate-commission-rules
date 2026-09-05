@@ -139,6 +139,29 @@ final class Fluent {
     return $label !== '' ? $label . ' (#' . $id . ')' : '#' . $id;
   }
 
+  /**
+   * Every affiliate as { id, label } for a picker, newest first, labelled
+   * exactly like affiliate_label() but with the user relation eager-loaded so
+   * a 500-row list is two queries rather than a thousand.
+   *
+   * @return array<int,array{id:int,label:string}>
+   */
+  public static function affiliates( int $limit = 500 ): array {
+    // ponytail: a 500-row cap, not paging. The picker is a filterable select;
+    // switch to remote search only if a store actually outgrows this.
+    $out = [];
+    foreach ( Affiliate::with( 'user' )->orderBy( 'id', 'DESC' )->limit( $limit )->get() as $affiliate ) {
+      $id    = (int) $affiliate->id;
+      $user  = $affiliate->user;
+      $label = $user ? trim( (string) $user->full_name ) : '';
+      if ( $label === '' && $user ) {
+        $label = trim( (string) $user->user_email );
+      }
+      $out[] = [ 'id' => $id, 'label' => $label !== '' ? $label . ' (#' . $id . ')' : '#' . $id ];
+    }
+    return $out;
+  }
+
   /** True when Fluent is configured to exclude tax from commissionable totals. */
   public static function excludes_tax(): bool {
     return self::referral_setting( 'exclude_tax', 'yes' ) !== 'no';
