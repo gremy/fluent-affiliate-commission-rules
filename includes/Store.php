@@ -82,13 +82,22 @@ final class Store {
    * @return array<int,array<string,mixed>>
    */
   public static function fluent_global_rules( string $context = 'sale' ): array {
-    $renewal = $context === 'renewal';
-    $gate    = $renewal ? 'renewal_custom_affiliate_rate' : 'custom_affiliate_rate';
-    $key     = $renewal ? 'renewal_custom_affiliate_rates' : 'custom_affiliate_rates';
-    $prefix  = $renewal ? 'fluent:renewal:' : 'fluent:';
+    $renewal      = $context === 'renewal';
+    $gate         = $renewal ? 'renewal_custom_affiliate_rate' : 'custom_affiliate_rate';
+    $key          = $renewal ? 'renewal_custom_affiliate_rates' : 'custom_affiliate_rates';
+    $prefix       = $renewal ? 'fluent:renewal:' : 'fluent:';
+    $watched_prod = $renewal ? 'renewal_watched_product_ids' : 'watched_product_ids';
+    $watched_cat  = $renewal ? 'renewal_watched_cat_ids' : 'watched_cat_ids';
 
     $config = Fluent::get_option( '_woo_connector_config', [] );
     if ( ! is_array( $config ) || ( $config[ $gate ] ?? 'no' ) !== 'yes' ) {
+      return [];
+    }
+    // Fluent itself only prices these rows when the gate is 'yes' AND it has
+    // built a non-empty watched-id list from them (BaseConnectorSettings::
+    // saveConfig() / RecurringCommissionTrait::calculateFinalRecurringCommissionAmount()).
+    // Mirror that so we never synthesise rules Fluent would silently ignore.
+    if ( empty( $config[ $watched_prod ] ) && empty( $config[ $watched_cat ] ) ) {
       return [];
     }
     $rows = $config[ $key ] ?? [];

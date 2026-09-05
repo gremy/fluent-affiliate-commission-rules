@@ -220,6 +220,10 @@ try {
   facr_it( 'forget_affiliate drops that affiliate rules', Store::all() === [] );
 
   // --------------------------------------------- Fluent global rows adapter --
+  // watched_product_ids / watched_cat_ids are what Fluent's own saveConfig()
+  // derives from custom_affiliate_rates and what its own price path gates on
+  // (BaseConnectorSettings::saveConfig()) -- set them alongside the rows, as a
+  // real save through Fluent's settings screen would.
   Fluent::update_option(
     '_woo_connector_config',
     array_merge(
@@ -230,6 +234,8 @@ try {
           [ 'object_type' => 'category', 'object_ids' => [ 44 ], 'rate' => '0', 'rate_type' => 'percentage' ],
           [ 'object_type' => 'product', 'object_ids' => [ 101 ], 'rate' => '3', 'rate_type' => 'flat' ],
         ],
+        'watched_product_ids'    => [ 101 ],
+        'watched_cat_ids'        => [ 44 ],
       ]
     )
   );
@@ -242,6 +248,26 @@ try {
   facr_it( 'fluent product row keeps rate type', $globals[1]['rate_type'] === 'flat' && $globals[1]['rate'] === 3.0 );
   facr_it( 'the sale table is not read for renewals', Store::fluent_global_rules( 'renewal' ) === [] );
 
+  // Gate is 'yes' and rows exist, but Fluent never built a watched-id list for
+  // them (e.g. a stale/partial save) -- Fluent itself would not price these
+  // rows, so neither should we.
+  Fluent::update_option(
+    '_woo_connector_config',
+    array_merge(
+      $facr_neutral_woo,
+      [
+        'custom_affiliate_rate'  => 'yes',
+        'custom_affiliate_rates' => [
+          [ 'object_type' => 'category', 'object_ids' => [ 44 ], 'rate' => '0', 'rate_type' => 'percentage' ],
+          [ 'object_type' => 'product', 'object_ids' => [ 101 ], 'rate' => '3', 'rate_type' => 'flat' ],
+        ],
+        'watched_product_ids'    => [],
+        'watched_cat_ids'        => [],
+      ]
+    )
+  );
+  facr_it( 'gate yes + rows + empty watched ids yields no synthetic rules', Store::fluent_global_rules() === [] );
+
   // Fluent keeps a second, independent rate table for renewals in the same option.
   Fluent::update_option(
     '_woo_connector_config',
@@ -253,6 +279,8 @@ try {
         'renewal_custom_affiliate_rates' => [
           [ 'object_type' => 'product', 'object_ids' => [ 101 ], 'rate' => '7', 'rate_type' => 'percentage' ],
         ],
+        'renewal_watched_product_ids'    => [ 101 ],
+        'renewal_watched_cat_ids'        => [],
       ]
     )
   );
@@ -261,6 +289,24 @@ try {
   facr_it( 'renewal rows carry their own synthetic id', $renewal_globals[0]['id'] === 'fluent:renewal:0' );
   facr_it( 'the renewal table is not read for sales', Store::fluent_global_rules() === [] );
   facr_it( 'resolvable passes the context through', Store::resolvable( 'renewal' ) === Store::fluent_global_rules( 'renewal' ) );
+
+  // Same empty-watched-ids gate, on the renewal table.
+  Fluent::update_option(
+    '_woo_connector_config',
+    array_merge(
+      $facr_neutral_woo,
+      [
+        'custom_affiliate_rate'          => 'no',
+        'renewal_custom_affiliate_rate'  => 'yes',
+        'renewal_custom_affiliate_rates' => [
+          [ 'object_type' => 'product', 'object_ids' => [ 101 ], 'rate' => '7', 'rate_type' => 'percentage' ],
+        ],
+        'renewal_watched_product_ids'    => [],
+        'renewal_watched_cat_ids'        => [],
+      ]
+    )
+  );
+  facr_it( 'renewal gate yes + rows + empty watched ids yields no synthetic rules', Store::fluent_global_rules( 'renewal' ) === [] );
 
   Fluent::update_option( '_woo_connector_config', $facr_neutral_woo );
   // ------------------------------------------------------------- lines ------
