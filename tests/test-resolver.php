@@ -169,6 +169,27 @@ facr_rt( 'a product rule matches the variation id', $out['lines'][0]['rule_id'] 
 $out = Resolver::resolve( $ctx, 0.0, [ facr_line( 44, 0.0 ) ], [ facr_rule( [ 'id' => 'z', 'scope_type' => 'affiliate', 'scope_id' => 7, 'rate' => 10.0 ] ) ], $now, $base );
 facr_rt( 'a zero-total order yields zero', abs( $out['amount'] ) < 0.001 );
 
+// 14b. A negative matched line is paid zero (clamped in line_commission), but
+// must not shrink matched_sum below what was actually claimed — otherwise the
+// remainder grows and the base rate gets re-paid on money a matched rule
+// already touched. order_total 150, lines +100 and -50, both matched by the
+// same 20% rule, 10% flat base on the remainder:
+//   matched_sum = max(0,100) + max(0,-50) = 100  =>  remainder = 50
+//   commission  = 20 (line1) + 0 (line2, clamped) = 20
+//   amount      = 20 + 0.10*50 = 25.00 (the old bug summed raw totals,
+//   matched_sum=50, remainder=100, giving 30.00 instead).
+$flat10 = static fn( float $remainder ): float => $remainder * 0.10;
+$out    = Resolver::resolve(
+  $ctx,
+  150.0,
+  [ facr_line( 44, 100.0 ), facr_line( 51, -50.0 ) ],
+  [ facr_rule( [ 'id' => 'neg', 'scope_type' => 'affiliate', 'scope_id' => 7, 'rate' => 20.0 ] ) ],
+  $now,
+  $flat10
+);
+facr_rt( 'a negative matched line does not shrink the remainder', abs( $out['amount'] - 25.0 ) < 0.001 );
+facr_rt( 'no line commission is ever negative', $out['lines'][0]['commission'] >= 0.0 && $out['lines'][1]['commission'] >= 0.0 );
+
 // 15. Shadow map for the admin list.
 // Overlap is deliberately strict: a rule only shadows another when both apply to
 // everyone, or when they name the same audience. Affiliate 7 may or may not be in
@@ -189,6 +210,16 @@ facr_rt( 'the narrowest rule in a group is not shadowed', $shadow['deeper'] === 
 facr_rt( 'a group rule is never shadowed by an affiliate rule', $shadow['wide'] !== 'mine' && $shadow['narrow'] !== 'mine' );
 facr_rt( 'a different group is not shadowed', $shadow['elsewhere'] === null );
 facr_rt( 'an Everyone rule is shadowed by the narrowest rule anywhere', $shadow['mine'] === null && $shadow['everyone'] === 'mine' );
+
+// 15b. shadow_map() must respect date windows: a narrower-but-expired rule
+// must never be reported as shadowing a live rule (it can't win any line,
+// expired or not, so reporting it as the override is simply wrong).
+$rules = [
+  facr_rule( [ 'id' => 'live-wide', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'all', 'rate' => 5.0, 'starts_at' => '2026-01-01' ] ),
+  facr_rule( [ 'id' => 'expired-narrow', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'product', 'target_ids' => [ 44 ], 'rate' => 15.0, 'ends_at' => '2020-01-01' ] ),
+];
+$shadow = Resolver::shadow_map( $rules );
+facr_rt( 'an expired narrower rule does not shadow a live rule', $shadow['live-wide'] === null );
 
 // 16. A flat base rate is a per-order figure, so it is prorated onto the
 // remainder rather than paid again in full.
@@ -214,6 +245,25 @@ facr_rt( 'the tie is reported on both rules', in_array( 'tie-a', $ties['tie-b'],
 facr_rt( 'a rule on a different category does not tie', $ties['tie-c'] === [] );
 facr_rt( 'a rule for a different audience does not tie', $ties['tie-other'] === [] );
 facr_rt( 'a rule whose window has already closed does not tie', $ties['tie-past'] === [] );
+
+
+// 18. Target precedence at equal scope: product beats category beats all,
+// with all three rules sharing the exact same scope.
+$rules = [
+  facr_rule( [ 'id' => 'scope-all', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'all', 'rate' => 5.0 ] ),
+  facr_rule( [ 'id' => 'scope-cat', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'category', 'target_ids' => [ 12 ], 'rate' => 10.0 ] ),
+  facr_rule( [ 'id' => 'scope-prod', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'product', 'target_ids' => [ 44 ], 'rate' => 15.0 ] ),
+];
+$out = Resolver::resolve( $ctx, 100.0, [ facr_line( 44, 100.0, [ 12 => 0 ] ) ], $rules, $now, $base );
+facr_rt( 'product target beats category and all at equal scope', $out['lines'][0]['rule_id'] === 'scope-prod' );
+facr_rt( 'the product rate is applied', abs( $out['amount'] - 15.0 ) < 0.001 );
+
+// 19. A parent-product rule still matches a variation line: target_ids names
+// the parent product id, the line carries a different variation_id.
+$rules = [ facr_rule( [ 'id' => 'parent', 'scope_type' => 'affiliate', 'scope_id' => 7, 'target_type' => 'product', 'target_ids' => [ 44 ], 'rate' => 18.0 ] ) ];
+$out   = Resolver::resolve( $ctx, 80.0, [ facr_line( 44, 80.0, [], 999 ) ], $rules, $now, $base );
+facr_rt( 'a parent-product rule matches a variation of that product', $out['lines'][0]['rule_id'] === 'parent' );
+facr_rt( 'the parent rule rate is applied to the variation line', abs( $out['amount'] - 14.4 ) < 0.001 );
 
 echo $GLOBALS['facr_res_fail'] ? "\n{$GLOBALS['facr_res_fail']} FAILURES\n" : "\nAll resolver checks passed\n";
 if ( PHP_SAPI === 'cli' && ! defined( 'WP_CLI' ) ) {

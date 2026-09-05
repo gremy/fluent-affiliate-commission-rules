@@ -101,7 +101,7 @@ final class Resolver {
 
       $line_total      = (float) ( $line['total'] ?? 0 );
       $line_commission = self::line_commission( $line_total, (float) $winner['rate'], (string) $winner['rate_type'] );
-      $matched_sum    += $line_total;
+      $matched_sum    += max( 0.0, $line_total );
       $commission     += $line_commission;
 
       $out_lines[] = [
@@ -159,6 +159,9 @@ final class Resolver {
           continue;
         }
         if ( ! self::scope_overlaps( $rule, $other ) || ! self::target_overlaps( $rule, $other ) ) {
+          continue;
+        }
+        if ( ! self::windows_overlap( $rule, $other ) ) {
           continue;
         }
         if ( self::score( $other ) > $best_score ) {
