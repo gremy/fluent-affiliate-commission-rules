@@ -6,6 +6,7 @@ namespace FACommissionRules\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use FACommissionRules\Fluent;
+use FACommissionRules\Labels;
 use FACommissionRules\Resolver;
 use FACommissionRules\Store;
 
@@ -83,9 +84,9 @@ final class Widgets {
     foreach ( $rules as $rule ) {
       $rows .= sprintf(
         '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-        esc_html( RulesPage::target_label( $rule ) ),
-        esc_html( RulesPage::rate_label( $rule ) ),
-        esc_html( RulesPage::window_label( $rule ) ),
+        esc_html( Labels::target_label( $rule ) ),
+        esc_html( Labels::rate_label( $rule ) ),
+        esc_html( Labels::window_label( $rule ) ),
         esc_html( self::source_label( $rule ) )
       );
     }
@@ -158,23 +159,23 @@ final class Widgets {
       : sprintf(
         /* translators: %s: the products or categories the rate covers */
         __( 'on %s', 'fa-commission-rules' ),
-        RulesPage::target_label( $rule )
+        Labels::target_label( $rule )
       );
 
     if ( (string) $rule['ends_at'] !== '' ) {
       return sprintf(
         /* translators: 1: commission rate, 2: what it applies to, 3: the last day it applies */
         __( 'You earn %1$s %2$s, until %3$s.', 'fa-commission-rules' ),
-        RulesPage::rate_label( $rule ),
+        Labels::rate_label( $rule ),
         $scope,
-        RulesPage::show_date( (string) $rule['ends_at'] )
+        Labels::show_date( (string) $rule['ends_at'] )
       );
     }
 
     return sprintf(
       /* translators: 1: commission rate, 2: what it applies to */
       __( 'You earn %1$s %2$s.', 'fa-commission-rules' ),
-      RulesPage::rate_label( $rule ),
+      Labels::rate_label( $rule ),
       $scope
     );
   }

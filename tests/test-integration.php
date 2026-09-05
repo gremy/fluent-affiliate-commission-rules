@@ -744,30 +744,45 @@ try {
   ];
   $facr_lbl_of = static fn( array $overrides ): array => array_merge( $facr_lbl, $overrides );
 
-  facr_it( 'scope_label names the affiliate', strpos( \FACommissionRules\Admin\RulesPage::scope_label( $facr_lbl ), '#' . $facr_aff_id ) !== false );
-  facr_it( 'scope_label for everyone carries no id', \FACommissionRules\Admin\RulesPage::scope_label( $facr_lbl_of( [ 'scope_type' => 'all', 'scope_id' => 0 ] ) ) === __( 'Everyone', 'fa-commission-rules' ) );
+  facr_it( 'scope_label names the affiliate', strpos( \FACommissionRules\Labels::scope_label( $facr_lbl ), '#' . $facr_aff_id ) !== false );
+  facr_it( 'scope_label for everyone carries no id', \FACommissionRules\Labels::scope_label( $facr_lbl_of( [ 'scope_type' => 'all', 'scope_id' => 0 ] ) ) === __( 'Everyone', 'fa-commission-rules' ) );
   if ( Fluent::has_pro() && $facr_group_id > 0 ) {
-    facr_it( 'scope_label names the group', strpos( \FACommissionRules\Admin\RulesPage::scope_label( $facr_lbl_of( [ 'scope_type' => 'group', 'scope_id' => $facr_group_id ] ) ), 'FACR Test Group' ) !== false );
+    facr_it( 'scope_label names the group', strpos( \FACommissionRules\Labels::scope_label( $facr_lbl_of( [ 'scope_type' => 'group', 'scope_id' => $facr_group_id ] ) ), 'FACR Test Group' ) !== false );
   } else {
     echo "SKIP Fluent Affiliate Pro inactive: group label not exercised\n";
   }
 
-  facr_it( 'target_label says all products', \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl ) === __( 'All products', 'fa-commission-rules' ) );
-  facr_it( 'target_label names the category', strpos( \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) ), 'FACR Child' ) !== false );
-  facr_it( 'target_label names the product', strpos( \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_id ] ] ) ), 'FACR Test Product A' ) !== false );
-  facr_it( 'target_label falls back to the id', strpos( \FACommissionRules\Admin\RulesPage::target_label( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ 999999999 ] ] ) ), '#999999999' ) !== false );
+  facr_it( 'target_label says all products', \FACommissionRules\Labels::target_label( $facr_lbl ) === __( 'All products', 'fa-commission-rules' ) );
+  facr_it( 'target_label names the category', strpos( \FACommissionRules\Labels::target_label( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) ), 'FACR Child' ) !== false );
+  facr_it( 'target_label names the product', strpos( \FACommissionRules\Labels::target_label( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_id ] ] ) ), 'FACR Test Product A' ) !== false );
+  facr_it( 'target_label falls back to the id', strpos( \FACommissionRules\Labels::target_label( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ 999999999 ] ] ) ), '#999999999' ) !== false );
 
-  facr_it( 'rate_label trims trailing zeros', \FACommissionRules\Admin\RulesPage::rate_label( $facr_lbl ) === '12.5%' );
-  facr_it( 'rate_label keeps whole percentages whole', \FACommissionRules\Admin\RulesPage::rate_label( $facr_lbl_of( [ 'rate' => 10.0 ] ) ) === '10%' );
-  facr_it( 'rate_label formats a flat rate as money', strpos( \FACommissionRules\Admin\RulesPage::rate_label( $facr_lbl_of( [ 'rate' => 3.0, 'rate_type' => 'flat' ] ) ), Fluent::money( 3.0 ) ) !== false );
+  facr_it( 'rate_label trims trailing zeros', \FACommissionRules\Labels::rate_label( $facr_lbl ) === '12.5%' );
+  facr_it( 'rate_label keeps whole percentages whole', \FACommissionRules\Labels::rate_label( $facr_lbl_of( [ 'rate' => 10.0 ] ) ) === '10%' );
+  facr_it( 'rate_label formats a flat rate as money', strpos( \FACommissionRules\Labels::rate_label( $facr_lbl_of( [ 'rate' => 3.0, 'rate_type' => 'flat' ] ) ), Fluent::money( 3.0 ) ) !== false );
 
-  facr_it( 'window_label says always when unbounded', \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl ) === __( 'Always', 'fa-commission-rules' ) );
-  facr_it( 'window_label renders dates in the site format', strpos( \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl_of( [ 'starts_at' => '2026-09-01', 'ends_at' => '2026-09-30' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
-  facr_it( 'window_label handles an open end', strpos( \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl_of( [ 'starts_at' => '2026-09-01' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-01' ) ) ) !== false );
-  facr_it( 'window_label handles an open start', strpos( \FACommissionRules\Admin\RulesPage::window_label( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
+  facr_it( 'window_label says always when unbounded', \FACommissionRules\Labels::window_label( $facr_lbl ) === __( 'Always', 'fa-commission-rules' ) );
+  facr_it( 'window_label renders dates in the site format', strpos( \FACommissionRules\Labels::window_label( $facr_lbl_of( [ 'starts_at' => '2026-09-01', 'ends_at' => '2026-09-30' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
+  facr_it( 'window_label handles an open end', strpos( \FACommissionRules\Labels::window_label( $facr_lbl_of( [ 'starts_at' => '2026-09-01' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-01' ) ) ) !== false );
+  facr_it( 'window_label handles an open start', strpos( \FACommissionRules\Labels::window_label( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) ), date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
 
-  $facr_described = \FACommissionRules\Admin\RulesPage::describe( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) );
+  $facr_described = \FACommissionRules\Labels::describe( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) );
   facr_it( 'describe composes rate, target and window', strpos( $facr_described, '12.5%' ) !== false && strpos( $facr_described, __( 'All products', 'fa-commission-rules' ) ) !== false );
+
+  $facr_for = \FACommissionRules\Labels::for_rule( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) );
+  facr_it( 'for_rule returns exactly scope, target, rate, window, sentence', array_keys( $facr_for ) === [ 'scope', 'target', 'rate', 'window', 'sentence' ] );
+  facr_it( 'for_rule scope matches scope_label', $facr_for['scope'] === \FACommissionRules\Labels::scope_label( $facr_lbl ) );
+  facr_it( 'for_rule rate matches rate_label', $facr_for['rate'] === '12.5%' );
+  facr_it( 'for_rule window names the end date', strpos( $facr_for['window'], date_i18n( (string) get_option( 'date_format' ), strtotime( '2026-09-30' ) ) ) !== false );
+  facr_it( 'for_rule sentence matches describe', $facr_for['sentence'] === $facr_described );
+  facr_it( 'default_rate_label is public and non-empty', \FACommissionRules\Labels::default_rate_label() !== '' );
+  facr_it( 'target_options is empty for all products', \FACommissionRules\Labels::target_options( $facr_lbl ) === [] );
+  $facr_topt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_id ] ] ) );
+  facr_it( 'target_options names the product with its id', ( $facr_topt[0]['id'] ?? 0 ) === $facr_product_id && strpos( (string) ( $facr_topt[0]['label'] ?? '' ), 'FACR Test Product A' ) !== false );
+  $facr_copt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) );
+  facr_it( 'target_options names the category', strpos( (string) ( $facr_copt[0]['label'] ?? '' ), 'FACR Child' ) !== false );
+  // Widgets must have moved off RulesPage: after Task 9 that class no longer exists.
+  facr_it( 'Widgets no longer calls RulesPage', strpos( (string) file_get_contents( FACR_DIR . 'includes/Admin/Widgets.php' ), 'RulesPage::' ) === false );
 
   // ---------------------------------------------------- missing/readonly ---
   // Task 7 fix round 1: an edit link or resubmit against an id the store no
