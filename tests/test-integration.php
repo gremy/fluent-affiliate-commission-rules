@@ -33,6 +33,14 @@ if ( ! Fluent::ready() ) {
   return;
 }
 
+// This file wipes the rule collection and rewrites Fluent's connector and
+// referral settings. The finally block puts them back, but a fatal mid-run would
+// not — so on a store that already has rules, don't start at all.
+if ( ! empty( Fluent::get_option( FACR_RULES_KEY, [] ) ) ) {
+  echo "SKIP this store already has commission rules: the integration test rewrites the rule collection and Fluent's connector settings, so it only runs against an empty store\n";
+  return;
+}
+
 $facr_backup      = Fluent::get_option( FACR_RULES_KEY, [] );
 $facr_woo_backup  = Fluent::get_option( '_woo_connector_config', [] );
 $facr_ref_backup  = get_option( '_fa_referral_settings', null );
@@ -669,6 +677,36 @@ try {
   $facr_untouched = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
   facr_it( 'no rules means no change to the amount', abs( (float) $facr_untouched['amount'] - 7.5 ) < 0.001 );
   facr_it( 'no rules means no audit stamp', ! isset( $facr_untouched['settings']['fa_commission_rules'] ) );
+
+  // -------------------------------------------------- input hardening ------
+  // `?action[]=x` posts an array where sanitize_key() demands a string, and every
+  // one of those is a TypeError — a white screen on a GET anyone can craft.
+  facr_it( 'scalar() flattens an array to an empty string', \FACommissionRules\Admin\RuleForm::scalar( [ 'edit' ] ) === '' );
+  facr_it( 'scalar() passes a scalar through as a string', \FACommissionRules\Admin\RuleForm::scalar( 42 ) === '42' );
+  facr_it( 'a sanitiser survives an array-valued request field', sanitize_key( \FACommissionRules\Admin\RuleForm::scalar( [ 'edit' ] ) ) === '' );
+
+  // created_at decides the newest-wins tie-break, so it is derived server-side
+  // and the form must not offer the browser a field to set it with.
+  facr_it(
+    'the rule form no longer posts created_at',
+    strpos( (string) file_get_contents( FACR_DIR . 'includes/Admin/RuleForm.php' ), 'facr_created_at' ) === false
+  );
+  [ $facr_ca_kept ] = Store::validate(
+    [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'created_at' => '2020-01-01T00:00:00+00:00' ]
+  );
+  facr_it( 'validate keeps a created_at that is passed in (an edit)', $facr_ca_kept['created_at'] === '2020-01-01T00:00:00+00:00' );
+  [ $facr_ca_new ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
+  facr_it( 'validate stamps created_at when none is passed in (a new rule)', $facr_ca_new['created_at'] !== '' );
+
+  if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+    $facr_features = \Automattic\WooCommerce\Utilities\FeaturesUtil::get_compatible_features_for_plugin( plugin_basename( FACR_FILE ) );
+    facr_it(
+      'the plugin declares HPOS compatibility',
+      in_array( 'custom_order_tables', (array) ( $facr_features['compatible'] ?? [] ), true )
+    );
+  } else {
+    echo "SKIP WooCommerce inactive: HPOS declaration not exercised\n";
+  }
 
   // ------------------------------------------------------------ labels ------
   $facr_lbl = [

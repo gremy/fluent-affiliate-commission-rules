@@ -74,6 +74,14 @@ Fluent 1.6.5 passes a float; the developer docs describe an array with an `amoun
 
 Installed 1.6.5 passes only affiliate, order_data, provider and vendor_order, and the WooCommerce integration never fires that filter at all. This plugin works on `fluent_affiliate/referral_data` instead.
 
+= What parts of Fluent Affiliate does this plugin depend on internally? =
+
+Fluent Affiliate exposes no public API for commission pricing, so a few internals are read directly: `RecurringReferral::getBaseRenewalCommission()` and `LifetimeCommissionHandler::getBaseLifetimeCommission()` (Pro) for Fluent's own base rate on renewals and lifetime sales; the `_woo_connector_config` option (its `custom_affiliate_rate(s)` and `renewal_*` gates and rate rows, plus the `watched_product_ids` / `watched_cat_ids` lists) for Fluent's global rate table, which is read live and never copied; the `order_total` and `products` keys of the `fluent_affiliate/referral_data` payload for the order lines; priority 10 of Pro's lifetime handler on that same filter, which is why this plugin hooks it at 20; and the float payload of `fluent_affiliate/recurring_commission`.
+
+None of them can produce a wrong payout if it changes. Where a base-rate method is unreachable the plugin falls back to a documented, conservative figure instead of guessing, and every touched referral's audit stamp records the remainder and exactly what was paid on it. Where anything else changes, the worst case is that Fluent's global rows stop being surfaced here, or that no rule engages at all and Fluent's own pricing stands untouched.
+
+One detail worth knowing when reading old audit stamps: the synthetic `fluent:<n>` ids for Fluent's own global rows are position-based — `<n>` is the row's index in the connector option's rate table, so reordering that table in Fluent's settings renumbers them.
+
 = Does it need Fluent Affiliate Pro? =
 
 No. Pro is needed for affiliate groups, lifetime commissions and the WooCommerce integration. Without Pro, the group scope is hidden and everything else works.

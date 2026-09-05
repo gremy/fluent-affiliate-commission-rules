@@ -22,20 +22,20 @@ final class RulesPage {
     }
 
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen state, no side effects.
-    $action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
+    $action = sanitize_key( wp_unslash( RuleForm::scalar( $_GET['action'] ?? '' ) ) );
     if ( in_array( $action, [ 'add', 'edit' ], true ) ) {
       RuleForm::render( $action );
       return;
     }
 
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter state.
-    $filter_scope = isset( $_GET['facr_scope'] ) ? sanitize_key( wp_unslash( $_GET['facr_scope'] ) ) : '';
+    $filter_scope = sanitize_key( wp_unslash( RuleForm::scalar( $_GET['facr_scope'] ?? '' ) ) );
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter state.
-    $filter_target = isset( $_GET['facr_target'] ) ? sanitize_key( wp_unslash( $_GET['facr_target'] ) ) : '';
+    $filter_target = sanitize_key( wp_unslash( RuleForm::scalar( $_GET['facr_target'] ?? '' ) ) );
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter state.
-    $filter_status = isset( $_GET['facr_status'] ) ? sanitize_key( wp_unslash( $_GET['facr_status'] ) ) : '';
+    $filter_status = sanitize_key( wp_unslash( RuleForm::scalar( $_GET['facr_status'] ?? '' ) ) );
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter state.
-    $search = isset( $_GET['facr_s'] ) ? sanitize_text_field( wp_unslash( $_GET['facr_s'] ) ) : '';
+    $search = sanitize_text_field( wp_unslash( RuleForm::scalar( $_GET['facr_s'] ?? '' ) ) );
 
     // Both maps are computed on the WHOLE list: a rule filtered out of the view
     // still overrides — and still conflicts with — the rules that are in it.
@@ -239,7 +239,14 @@ final class RulesPage {
             sprintf(
               /* translators: %s: the narrower rule that takes precedence for some products */
               __( 'Overridden for some products by: %s', 'fa-commission-rules' ),
-              $by ? self::scope_label( $by ) . ' → ' . self::target_label( $by ) : ''
+              $by
+                ? sprintf(
+                  /* translators: 1: who the narrower rule applies to, 2: the products it targets */
+                  __( '%1$s → %2$s', 'fa-commission-rules' ),
+                  self::scope_label( $by ),
+                  self::target_label( $by )
+                )
+                : ''
             )
           )
         );
@@ -312,8 +319,11 @@ final class RulesPage {
         $term    = get_term( (int) $id, 'product_cat' );
         $names[] = ( $term && ! is_wp_error( $term ) ) ? $term->name : '#' . (int) $id;
       } else {
-        $title   = get_the_title( (int) $id );
-        $names[] = $title !== '' ? $title : '#' . (int) $id;
+        // Same label the rule editor shows, so a variation reads as its variation
+        // and not as its parent's title.
+        $product = function_exists( 'wc_get_product' ) ? wc_get_product( (int) $id ) : null;
+        $title   = $product ? $product->get_formatted_name() : get_the_title( (int) $id );
+        $names[] = (string) $title !== '' ? (string) $title : '#' . (int) $id;
       }
     }
     $list = implode( ', ', $names );
@@ -399,7 +409,7 @@ final class RulesPage {
 
   private static function notice(): void {
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect flag.
-    $notice = isset( $_GET['facr_notice'] ) ? sanitize_key( wp_unslash( $_GET['facr_notice'] ) ) : '';
+    $notice = sanitize_key( wp_unslash( RuleForm::scalar( $_GET['facr_notice'] ?? '' ) ) );
     if ( $notice === '' ) {
       return;
     }
@@ -416,7 +426,7 @@ final class RulesPage {
     }
     [ $level, $message ] = $messages[ $notice ];
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect detail.
-    $detail = isset( $_GET['facr_detail'] ) ? sanitize_text_field( wp_unslash( $_GET['facr_detail'] ) ) : '';
+    $detail = sanitize_text_field( wp_unslash( RuleForm::scalar( $_GET['facr_detail'] ?? '' ) ) );
     printf(
       '<div class="notice notice-%s is-dismissible"><p>%s%s</p></div>',
       esc_attr( $level ),

@@ -193,8 +193,13 @@ final class Resolver {
   }
 
   public static function line_commission( float $total, float $rate, string $rate_type ): float {
-    $commission = $rate_type === 'percentage' ? ( $total * $rate ) / 100 : $rate;
-    return $commission < 0 ? 0.0 : $commission;
+    if ( $rate_type !== 'percentage' ) {
+      // A flat rate is paid per line actually sold. A line that totals nothing —
+      // a fully discounted item, a free gift, a refunded line — sold nothing, so
+      // it earns nothing; paying the flat amount there is money out of thin air.
+      return $total > 0 ? max( 0.0, $rate ) : 0.0;
+    }
+    return max( 0.0, ( $total * $rate ) / 100 );
   }
 
   /**

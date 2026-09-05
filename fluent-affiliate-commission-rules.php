@@ -42,5 +42,17 @@ spl_autoload_register(
   }
 );
 
+// The plugin never touches the orders tables directly — it reads line items off
+// the WC_Order object Fluent hands it — so HPOS is safe. Say so, or WooCommerce
+// lists us as incompatible and refuses to let a store turn HPOS on.
+add_action(
+  'before_woocommerce_init',
+  static function (): void {
+    if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+      \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+    }
+  }
+);
+
 // Fluent Affiliate boots its own app on plugins_loaded; 20 lands after it.
 add_action( 'plugins_loaded', [ 'FACommissionRules\\Plugin', 'boot' ], 20 );

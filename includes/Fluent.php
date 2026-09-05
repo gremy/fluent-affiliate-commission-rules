@@ -78,14 +78,23 @@ final class Fluent {
    * @return array<int,string>
    */
   public static function groups(): array {
+    // ponytail: one query per request. group_name() is called once per row of the
+    // rules list, and groups do not change mid-request. Add invalidation only if
+    // something ever creates a group and re-reads it in the same request.
+    static $cache = null;
+    if ( is_array( $cache ) ) {
+      return $cache;
+    }
     if ( ! self::has_pro() || ! class_exists( AffiliateGroup::class ) ) {
-      return [];
+      $cache = [];
+      return $cache;
     }
     $out = [];
     foreach ( AffiliateGroup::orderBy( 'meta_key', 'ASC' )->get() as $group ) {
       $out[ (int) $group->id ] = (string) $group->meta_key;
     }
-    return $out;
+    $cache = $out;
+    return $cache;
   }
 
   public static function group_name( int $id ): string {

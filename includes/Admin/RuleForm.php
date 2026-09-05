@@ -22,12 +22,23 @@ final class RuleForm {
     add_action( 'admin_post_facr_bulk', [ $this, 'handle_bulk' ] );
   }
 
+  /**
+   * One superglobal value, safe to hand to sanitize_key()/sanitize_text_field()/(int).
+   * `?action[]=x` arrives as an array, and every one of those throws a TypeError
+   * on an array. Shared with RulesPage — the same request reaches both.
+   *
+   * @param mixed $value
+   */
+  public static function scalar( $value ): string {
+    return is_scalar( $value ) ? (string) $value : '';
+  }
+
   // ------------------------------------------------------------ handlers ---
 
   public function handle_save(): void {
     self::guard( 'facr_save_rule' );
 
-    $id = isset( $_POST['facr_id'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_id'] ) ) : '';
+    $id = sanitize_text_field( wp_unslash( self::scalar( $_POST['facr_id'] ?? '' ) ) );
 
     if ( strncmp( $id, 'fluent:', 7 ) === 0 ) {
       // Belt and suspenders: Store::save() already no-ops on this prefix, but
@@ -44,7 +55,7 @@ final class RuleForm {
       exit;
     }
 
-    $target_type = isset( $_POST['facr_target_type'] ) ? sanitize_key( wp_unslash( $_POST['facr_target_type'] ) ) : 'all';
+    $target_type = sanitize_key( wp_unslash( self::scalar( $_POST['facr_target_type'] ?? 'all' ) ) );
 
     // The category picker and the product picker are both on the page, and a
     // disabled select still posts in some browsers. Read only the control the
@@ -55,17 +66,20 @@ final class RuleForm {
 
     $input = [
       'id'          => $id,
-      'created_at'  => isset( $_POST['facr_created_at'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_created_at'] ) ) : '',
-      'status'      => isset( $_POST['facr_status'] ) ? sanitize_key( wp_unslash( $_POST['facr_status'] ) ) : 'active',
-      'scope_type'  => isset( $_POST['facr_scope_type'] ) ? sanitize_key( wp_unslash( $_POST['facr_scope_type'] ) ) : 'all',
-      'scope_id'    => isset( $_POST['facr_scope_id'] ) ? (int) $_POST['facr_scope_id'] : 0,
+      // Never from the request: an existing rule keeps the stamp it was created
+      // with, a new one gets stamped by Store. created_at decides the newest-wins
+      // tie-break, i.e. real money, so it is not the browser's to set.
+      'created_at'  => $id !== '' ? (string) ( Store::get( $id )['created_at'] ?? '' ) : '',
+      'status'      => sanitize_key( wp_unslash( self::scalar( $_POST['facr_status'] ?? 'active' ) ) ),
+      'scope_type'  => sanitize_key( wp_unslash( self::scalar( $_POST['facr_scope_type'] ?? 'all' ) ) ),
+      'scope_id'    => (int) self::scalar( $_POST['facr_scope_id'] ?? 0 ),
       'target_type' => $target_type,
       'target_ids'  => $target_ids,
-      'rate'        => isset( $_POST['facr_rate'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_rate'] ) ) : '',
-      'rate_type'   => isset( $_POST['facr_rate_type'] ) ? sanitize_key( wp_unslash( $_POST['facr_rate_type'] ) ) : 'percentage',
-      'starts_at'   => isset( $_POST['facr_starts_at'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_starts_at'] ) ) : '',
-      'ends_at'     => isset( $_POST['facr_ends_at'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_ends_at'] ) ) : '',
-      'note'        => isset( $_POST['facr_note'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_note'] ) ) : '',
+      'rate'        => sanitize_text_field( wp_unslash( self::scalar( $_POST['facr_rate'] ?? '' ) ) ),
+      'rate_type'   => sanitize_key( wp_unslash( self::scalar( $_POST['facr_rate_type'] ?? 'percentage' ) ) ),
+      'starts_at'   => sanitize_text_field( wp_unslash( self::scalar( $_POST['facr_starts_at'] ?? '' ) ) ),
+      'ends_at'     => sanitize_text_field( wp_unslash( self::scalar( $_POST['facr_ends_at'] ?? '' ) ) ),
+      'note'        => sanitize_text_field( wp_unslash( self::scalar( $_POST['facr_note'] ?? '' ) ) ),
     ];
 
     [ $rule, $errors ] = Store::validate( $input );
@@ -94,7 +108,12 @@ final class RuleForm {
       Menu::page_url(
         [
           'facr_notice' => $conflict ? 'saved_conflict' : 'saved',
-          'facr_detail' => RulesPage::scope_label( $rule ) . ' — ' . RulesPage::describe( $rule ),
+          'facr_detail' => sprintf(
+            /* translators: 1: who the rule applies to, 2: what the rule does */
+            __( '%1$s — %2$s', 'fa-commission-rules' ),
+            RulesPage::scope_label( $rule ),
+            RulesPage::describe( $rule )
+          ),
         ]
       )
     );
@@ -103,7 +122,7 @@ final class RuleForm {
 
   public function handle_delete(): void {
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the nonce is checked inside guard(), which needs this value to build the action.
-    $id = isset( $_GET['rule'] ) ? sanitize_text_field( wp_unslash( $_GET['rule'] ) ) : '';
+    $id = sanitize_text_field( wp_unslash( self::scalar( $_GET['rule'] ?? '' ) ) );
     self::guard( 'facr_delete_rule_' . $id );
     Store::delete( $id );
     wp_safe_redirect( Menu::page_url( [ 'facr_notice' => 'deleted' ] ) );
@@ -113,8 +132,11 @@ final class RuleForm {
   public function handle_bulk(): void {
     self::guard( 'facr_bulk' );
 
-    $bulk = isset( $_POST['facr_bulk_action'] ) ? sanitize_key( wp_unslash( $_POST['facr_bulk_action'] ) ) : '';
-    $ids  = isset( $_POST['facr_ids'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['facr_ids'] ) ) : [];
+    $bulk = sanitize_key( wp_unslash( self::scalar( $_POST['facr_bulk_action'] ?? '' ) ) );
+    $ids  = array_map(
+      static fn( $id ): string => sanitize_text_field( self::scalar( $id ) ),
+      isset( $_POST['facr_ids'] ) ? (array) wp_unslash( $_POST['facr_ids'] ) : []
+    );
 
     $count = 0;
     if ( $ids ) {
@@ -162,7 +184,7 @@ final class RuleForm {
     }
 
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen state.
-    $rule_id = isset( $_GET['rule'] ) ? sanitize_text_field( wp_unslash( $_GET['rule'] ) ) : '';
+    $rule_id = sanitize_text_field( wp_unslash( self::scalar( $_GET['rule'] ?? '' ) ) );
     $rule    = $action === 'edit' && $rule_id !== '' ? Store::get( $rule_id ) : null;
 
     $stashed = get_transient( self::error_key() );
@@ -182,7 +204,7 @@ final class RuleForm {
     if ( ! $rule ) {
       // Prefill from the affiliate profile card's "Add rule for this affiliate" link.
       // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only prefill.
-      $prefill_affiliate = isset( $_GET['affiliate_id'] ) ? (int) $_GET['affiliate_id'] : 0;
+      $prefill_affiliate = (int) self::scalar( $_GET['affiliate_id'] ?? 0 );
       $rule              = [
         'id'          => '',
         'status'      => 'active',
@@ -209,7 +231,6 @@ final class RuleForm {
     wp_nonce_field( 'facr_save_rule' );
     echo '<input type="hidden" name="action" value="facr_save_rule">';
     printf( '<input type="hidden" name="facr_id" value="%s">', esc_attr( (string) $rule['id'] ) );
-    printf( '<input type="hidden" name="facr_created_at" value="%s">', esc_attr( (string) $rule['created_at'] ) );
 
     echo '<table class="form-table" role="presentation"><tbody>';
 
@@ -352,7 +373,7 @@ final class RuleForm {
         printf( '<option value="percentage"%s>%s</option>', selected( $rule['rate_type'], 'percentage', false ), esc_html__( '% of the line total', 'fa-commission-rules' ) );
         printf( '<option value="flat"%s>%s</option>', selected( $rule['rate_type'], 'flat', false ), esc_html__( 'flat, per order line', 'fa-commission-rules' ) );
         echo '</select>';
-        printf( '<p class="description">%s</p>', esc_html__( 'Applied to the same order total Fluent Affiliate commissions, so your tax and shipping settings are respected.', 'fa-commission-rules' ) );
+        printf( '<p class="description">%s</p>', esc_html__( 'Applied per matching order line, to the same line totals Fluent Affiliate commissions — so your tax and shipping settings are respected.', 'fa-commission-rules' ) );
       },
       $errors['rate'] ?? '',
       'facr_rate'
@@ -416,7 +437,16 @@ final class RuleForm {
     printf(
       '<p class="description" style="font-size:14px;"><strong>%s</strong> <span id="facr_result">%s</span></p>',
       esc_html__( 'Result:', 'fa-commission-rules' ),
-      esc_html( (string) $rule['id'] !== '' ? RulesPage::scope_label( $rule ) . ' — ' . RulesPage::describe( $rule ) : '' )
+      esc_html(
+        (string) $rule['id'] !== ''
+          ? sprintf(
+            /* translators: 1: who the rule applies to, 2: what the rule does */
+            __( '%1$s — %2$s', 'fa-commission-rules' ),
+            RulesPage::scope_label( $rule ),
+            RulesPage::describe( $rule )
+          )
+          : ''
+      )
     );
 
     submit_button( __( 'Save rule', 'fa-commission-rules' ) );

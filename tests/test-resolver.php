@@ -292,6 +292,17 @@ $eff_ids = array_map( static fn( array $r ): string => (string) $r['id'], $eff )
 sort( $eff_ids );
 facr_rt( 'effective(): rules on different targets are both kept', $eff_ids === [ 'grp-cat', 'own-all' ] );
 
+// 21. A flat rate on a line that sold nothing pays nothing. The line is still
+// claimed by the rule — it just is not worth anything — so the untouched part of
+// the order keeps the base rate and nobody is paid for a free gift.
+$rules  = [ facr_rule( [ 'id' => 'flat50', 'scope_type' => 'affiliate', 'scope_id' => 7, 'target_type' => 'product', 'target_ids' => [ 101 ], 'rate' => 50.0, 'rate_type' => 'flat' ] ) ];
+$base10 = static fn( float $remainder ): float => $remainder * 0.10;
+$out    = Resolver::resolve( $ctx, 100.0, [ facr_line( 101, 0.0 ), facr_line( 202, 100.0 ) ], $rules, $now, $base10 );
+facr_rt( 'a flat rate pays nothing on a zero-total line', abs( (float) $out['lines'][0]['commission'] ) < 0.001 );
+facr_rt( 'a zero-total flat line does not inflate the order commission', abs( $out['amount'] - 10.0 ) < 0.001 );
+facr_rt( 'a flat rate still pays in full on a line that sold something', abs( Resolver::line_commission( 100.0, 50.0, 'flat' ) - 50.0 ) < 0.001 );
+facr_rt( 'a percentage on a zero-total line is still zero', abs( Resolver::line_commission( 0.0, 10.0, 'percentage' ) ) < 0.001 );
+
 echo $GLOBALS['facr_res_fail'] ? "\n{$GLOBALS['facr_res_fail']} FAILURES\n" : "\nAll resolver checks passed\n";
 if ( PHP_SAPI === 'cli' && ! defined( 'WP_CLI' ) ) {
   exit( $GLOBALS['facr_res_fail'] ? 1 : 0 );

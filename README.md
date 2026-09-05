@@ -86,6 +86,32 @@ It deliberately does **not** hook `fluent_affiliate/commission`: WooCommerce nev
 fires it, and hooking it alongside `referral_data` would double-apply on the
 providers that do.
 
+## Fluent Affiliate internals this plugin relies on
+
+Fluent Affiliate exposes no public API for commission pricing, so a handful of
+internals are read directly. None of them can produce a **wrong payout** if it
+changes: for the two base-rate methods the plugin falls back to a documented,
+conservative reading rather than guessing, and the referral's audit stamp always
+records the remainder total and exactly what was paid on it, so any order can be
+re-derived from what was written. What degrades is precision, never correctness.
+
+| Internal | Used for | What degrades if it changes |
+|---|---|---|
+| `RecurringReferral::getBaseRenewalCommission()` (Pro) | Fluent's own whole-order base commission for a subscription renewal, which is then prorated by `remainder ÷ order_total` to price the part of the renewal no rule claimed. | Falls back to Fluent's already-blended figure, prorated the same way. That figure includes lines Fluent's own renewal rate table priced, so the unclaimed remainder can be paid slightly generously — a known ceiling, documented in the FAQ. It is never paid twice on a line a rule claimed. |
+| `LifetimeCommissionHandler::getBaseLifetimeCommission()` (Pro) | The same, for `lifetime_sale` referrals. | Falls back to `$affiliate->getCommission( $total, 'sale' )` — the affiliate's ordinary sale rate instead of their lifetime rate. Rules still price every line they claim; only the unclaimed remainder shifts. |
+| The `_woo_connector_config` option: the `custom_affiliate_rate` / `renewal_custom_affiliate_rate` gates, the `custom_affiliate_rates` / `renewal_custom_affiliate_rates` rows (`object_type`, `object_ids`, `rate`, `rate_type`) | Reading Fluent's own site-wide product/category rate table **live**, so it takes part in resolution as read-only "Everyone" rules instead of being silently overridden. Nothing is ever copied out of it. | Those rows stop being surfaced here. This plugin's own rules keep working, and Fluent keeps applying its table itself to anything no rule of ours claims. Because nothing is cached, no stale rate can ever be paid. |
+| `watched_product_ids` / `watched_cat_ids` and their `renewal_` twins | The second gate Fluent itself checks before pricing those rows — mirrored, so this plugin never synthesises a rule Fluent would ignore. | At worst a Fluent global row is listed that Fluent no longer prices, or one is hidden that it does. Our own rules are unaffected. |
+| The `order_total` and `products` keys of the `fluent_affiliate/referral_data` payload (and `order_data.referral_order_total` / `order_data.items` on `fluent_affiliate/recurring_commission`) | Building the order lines a rule is matched against. | With no usable total the plugin returns the amount untouched; with no usable lines it falls back to a single whole-order line. Either way Fluent's own pricing stands rather than a guess. |
+| Priority 10 of Pro's lifetime handler on `fluent_affiliate/referral_data` | Why this plugin hooks that filter at 20: it has to run after Pro has replaced the amount, or its result is discarded. | If Pro moves later, lifetime commissions revert to Pro's own amount — surprising, but exactly what the store would have paid without this plugin. |
+| The float payload of `fluent_affiliate/recurring_commission` | Renewal pricing. Fluent 1.6.5 passes a float; the developer docs describe an array with an `amount` key. | Both shapes are handled and whichever came in is what goes back out, so a version that switches shapes needs no change here. |
+
+The synthetic `fluent:<n>` (and `fluent:renewal:<n>`) ids that stand for Fluent's
+own rows — in the rules list and in audit stamps — are **position-based**: `<n>`
+is that row's index in the connector option's rate table, not a stable id.
+Reordering the table in Fluent's settings renumbers them, so read a `fluent:<n>`
+in an old stamp as "one of Fluent's global rows at the time", not as a row you
+can still look up today.
+
 ## Storage
 
 One collection, in Fluent's own option storage (`fa_meta`, `object_type = 'option'`)
