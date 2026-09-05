@@ -30,17 +30,33 @@ if ( ! function_exists( 'facr_adm' ) ) {
 
 if ( ! Fluent::ready() ) {
   echo "SKIP Fluent Affiliate is not active\n";
+  $GLOBALS['facr_adm_skipped'] = true;
   return;
 }
 
+$facr_a_users = []; // only ids this file actually created; nothing else is ever deleted.
 $facr_a_admin = 0;
 $facr_a_sub   = 0;
 $facr_a_prev  = get_current_user_id();
 $facr_a_page  = $_GET['page'] ?? null;
 
 try {
-  $facr_a_admin = (int) wp_insert_user( [ 'user_login' => 'facr_adm_admin_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_adm_admin_' . wp_rand() . '@example.test', 'role' => 'administrator' ] );
-  $facr_a_sub   = (int) wp_insert_user( [ 'user_login' => 'facr_adm_sub_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_adm_sub_' . wp_rand() . '@example.test', 'role' => 'subscriber' ] );
+  // wp_insert_user() returns WP_Error on failure, and (int) WP_Error is 1 — the
+  // site administrator. Keep the raw result, bail on an error, and only ever
+  // delete ids this block confirmed it created.
+  foreach ( [ 'administrator', 'subscriber' ] as $facr_a_role ) {
+    $facr_a_created = wp_insert_user( [ 'user_login' => 'facr_adm_' . $facr_a_role . '_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_adm_' . $facr_a_role . '_' . wp_rand() . '@example.test', 'role' => $facr_a_role ] );
+    if ( is_wp_error( $facr_a_created ) || (int) $facr_a_created <= 0 ) {
+      facr_adm( "fixture user ({$facr_a_role}) created", false );
+      return;
+    }
+    $facr_a_users[] = (int) $facr_a_created;
+    if ( $facr_a_role === 'administrator' ) {
+      $facr_a_admin = (int) $facr_a_created;
+    } else {
+      $facr_a_sub = (int) $facr_a_created;
+    }
+  }
 
   // Plugin::boot() only wires Menu when is_admin(); under WP-CLI it is not.
   $facr_a_menu = new Menu();
@@ -89,7 +105,17 @@ try {
     facr_adm( "facrAdmin carries {$facr_a_needle}", strpos( $facr_a_data, $facr_a_needle ) !== false );
   }
   facr_adm( 'rest_url points at our namespace', strpos( $facr_a_data, 'fa-commission-rules\/v1' ) !== false || strpos( $facr_a_data, 'fa-commission-rules/v1' ) !== false );
-  facr_adm( 'money_template carries the amount placeholder', strpos( $facr_a_data, '%s' ) !== false );
+  // Decode the localised payload rather than substring-matching it: "%s" appears
+  // in half a dozen i18n strings, so the raw-string check passed whatever
+  // money_template actually held.
+  $facr_a_json    = json_decode( (string) preg_replace( '/^var facrAdmin = |;$/', '', trim( $facr_a_data ) ), true );
+  facr_adm( 'the localised payload decodes as JSON', is_array( $facr_a_json ) );
+  facr_adm( 'money_template carries the amount placeholder', is_array( $facr_a_json ) && strpos( (string) ( $facr_a_json['money_template'] ?? '' ), '%s' ) !== false );
+  facr_adm( 'today is the site date in Y-m-d', is_array( $facr_a_json ) && (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) ( $facr_a_json['today'] ?? '' ) ) );
+  facr_adm( 'today is the site timezone, not UTC', is_array( $facr_a_json ) && ( $facr_a_json['today'] ?? '' ) === wp_date( 'Y-m-d' ) );
+  foreach ( [ 'status_scheduled', 'status_expired' ] as $facr_a_i18n_key ) {
+    facr_adm( "i18n carries {$facr_a_i18n_key}", is_array( $facr_a_json ) && ( $facr_a_json['i18n'][ $facr_a_i18n_key ] ?? '' ) !== '' );
+  }
   $facr_a_before = implode( "\n", (array) wp_scripts()->get_data( 'facr-app', 'before' ) );
   facr_adm( 'the dark-mode bootstrap is inlined before the app', strpos( $facr_a_before, 'fla_color_mode' ) !== false && strpos( $facr_a_before, 'window.toggleColorMode' ) !== false );
   facr_adm( 'the bootstrap defines the navbar mobile toggles', strpos( $facr_a_before, 'window.toggleMobileMenu' ) !== false && strpos( $facr_a_before, 'window.toggleMobileSettingsMenu' ) !== false );
@@ -120,8 +146,9 @@ try {
     $_GET['page'] = $facr_a_page;
   }
   require_once ABSPATH . 'wp-admin/includes/user.php';
-  foreach ( [ $facr_a_admin, $facr_a_sub ] as $facr_a_uid ) {
-    if ( $facr_a_uid > 0 ) {
+  foreach ( $facr_a_users as $facr_a_uid ) {
+    // > 1 as belt and braces: id 1 is never ours to delete, whatever went wrong.
+    if ( $facr_a_uid > 1 ) {
       wp_delete_user( $facr_a_uid );
     }
   }

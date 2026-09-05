@@ -31,6 +31,7 @@ if ( ! function_exists( 'facr_it' ) ) {
 
 if ( ! Fluent::ready() ) {
   echo "SKIP Fluent Affiliate is not active\n";
+  $GLOBALS['facr_int_skipped'] = true;
   return;
 }
 
@@ -39,6 +40,7 @@ if ( ! Fluent::ready() ) {
 // not — so on a store that already has rules, don't start at all.
 if ( ! empty( Fluent::get_option( FACR_RULES_KEY, [] ) ) ) {
   echo "SKIP this store already has commission rules: the integration test rewrites the rule collection and Fluent's connector settings, so it only runs against an empty store\n";
+  $GLOBALS['facr_int_skipped'] = true;
   return;
 }
 
@@ -78,6 +80,7 @@ try {
   );
   if ( is_wp_error( $facr_new_user ) ) {
     echo 'SKIP could not create a test user: ' . $facr_new_user->get_error_message() . "\n";
+    $GLOBALS['facr_int_skipped'] = true;
     return;
   }
   $facr_user_id = (int) $facr_new_user;
@@ -226,6 +229,25 @@ try {
 
   [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '-1', 'rate_type' => 'flat' ] );
   facr_it( 'flat rate cannot be negative', isset( $errors['rate'] ) );
+
+  // '1e309' is numeric and casts to INF; stored as a flat rate it would pay
+  // infinity on every matching order line.
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '1e309', 'rate_type' => 'flat' ] );
+  facr_it( 'an overflowing flat rate is rejected', isset( $errors['rate'] ) );
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 'INF', 'rate_type' => 'flat' ] );
+  facr_it( 'a literal INF flat rate is rejected', isset( $errors['rate'] ) );
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '2000000', 'rate_type' => 'flat' ] );
+  facr_it( 'an absurd flat rate is rejected', isset( $errors['rate'] ) );
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '999999', 'rate_type' => 'flat' ] );
+  facr_it( 'a large but sane flat rate still validates', $errors === [] );
+
+  // created_at breaks ties, so two rules saved back to back must not collide.
+  [ $facr_stamp_a ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
+  [ $facr_stamp_b ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '6', 'rate_type' => 'percentage' ] );
+  facr_it( 'two rules minted back to back get distinct created_at stamps', $facr_stamp_a['created_at'] !== $facr_stamp_b['created_at'] );
+  facr_it( 'the later stamp sorts later under a plain string compare', strcmp( (string) $facr_stamp_b['created_at'], (string) $facr_stamp_a['created_at'] ) > 0 );
+  facr_it( 'a minted stamp is still an ISO-8601 UTC string', (bool) preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\+00:00$/', (string) $facr_stamp_a['created_at'] ) );
+  facr_it( "a Fluent synthetic row's epoch stamp still sorts oldest", strcmp( '1970-01-01T00:00:00+00:00', (string) $facr_stamp_a['created_at'] ) < 0 );
 
   [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'starts_at' => '2026-10-01', 'ends_at' => '2026-09-01' ] );
   facr_it( 'ends_at must not precede starts_at', isset( $errors['ends_at'] ) );
@@ -771,8 +793,11 @@ try {
   facr_it( 'target_options is empty for all products', \FACommissionRules\Labels::target_options( $facr_lbl ) === [] );
   $facr_topt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_id ] ] ) );
   facr_it( 'target_options names the product with its id', ( $facr_topt[0]['id'] ?? 0 ) === $facr_product_id && strpos( (string) ( $facr_topt[0]['label'] ?? '' ), 'FACR Test Product A' ) !== false );
+  // Only the product picker consumes target_options; the category picker is fed
+  // the whole tree by GET /options, so a category rule ships none.
   $facr_copt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) );
-  facr_it( 'target_options names the category', strpos( (string) ( $facr_copt[0]['label'] ?? '' ), 'FACR Child' ) !== false );
+  facr_it( 'target_options is empty for a category rule', $facr_copt === [] );
+  facr_it( 'a category rule still gets its names from target_label', strpos( \FACommissionRules\Labels::target_label( $facr_lbl_of( [ 'target_type' => 'category', 'target_ids' => [ $facr_cat_child ] ] ) ), 'FACR Child' ) !== false );
   $facr_vopt = \FACommissionRules\Labels::target_options( $facr_lbl_of( [ 'target_type' => 'product', 'target_ids' => [ $facr_product_var ] ] ) );
   facr_it( 'target_options strips HTML from a variation label', strpos( (string) ( $facr_vopt[0]['label'] ?? '' ), '<' ) === false );
   // Widgets must have moved off RulesPage: after Task 9 that class no longer exists.

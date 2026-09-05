@@ -5,8 +5,8 @@ targeted at a product, a product category, or everything, with an optional date 
 
 **Source:** Developed in a private monorepo; this GitHub repository
 ([github.com/gremy/fluent-affiliate-commission-rules](https://github.com/gremy/fluent-affiliate-commission-rules))
-is a one-way mirror of the plugin directory (changes are mirrored out by
-`bin/mirror-fa-commission-rules.sh`).
+is a one-way mirror of the plugin directory (changes are mirrored out commit by
+commit by a mirror script in the monorepo, which is not part of this subtree).
 
 > Independent third-party add-on. Not affiliated with, or endorsed by, WPManageNinja.
 
@@ -14,7 +14,7 @@ Fluent Affiliate can give each affiliate one rate, each group one rate, and the
 whole site one product/category rate table. What it cannot express is the thing
 most partner programs actually need:
 
-> Partner X earns 10% on Coffee. Partner Y earns 5% on the same category.
+> Partner X earns 10% on Headphones. Partner Y earns 5% on the same category.
 
 This plugin adds that, without touching Fluent's compiled admin app and without
 replacing any of its own maths.
@@ -94,8 +94,11 @@ exists, the plugin does the next best thing:
   renders; a smoke test fails the build if that ever stops being true.
 - **A small REST API** (`fa-commission-rules/v1`: rules, options, product
   search) gated on Fluent's `manage_all_data` permission and authenticated with
-  the standard `wp_rest` nonce, like their own SPA. Every rule label is built
-  server-side, so the browser holds no naming or money-formatting logic.
+  the standard `wp_rest` nonce, like their own SPA. Every label in the rules list
+  is built server-side and rendered verbatim by the browser; the only thing the
+  app composes itself is the live "Result:" preview in the editor, from localised
+  sentence and money templates handed to it by PHP — so no naming or money format
+  is ever invented client-side.
 
 If Fluent Affiliate ever grows a module contract, the app is one `createApp()`
 away from becoming a route in theirs.
@@ -189,6 +192,11 @@ applies: a rule scoped to that one affiliate beats the group's.
 
 **Product search in the rule editor shows nothing.**
 The editor searches through this plugin's own endpoint (`GET /fa-commission-rules/v1/products?search=`), which needs only Fluent Affiliate's `manage_all_data` permission (via the REST route's `permission_callback`) and WooCommerce active. Type at least two characters; products and variations are matched by title, SKU and content, the same way WooCommerce's own admin search works.
+
+**The affiliate picker in the editor doesn't list all my affiliates.**
+It loads the 500 most recent affiliates in one go and filters them in the
+browser; a program larger than that needs the picker switched to a remote search
+against the REST API.
 
 **I edited a rule and got told it can't be saved.**
 Two rules are refused outright rather than silently discarded: a rule whose id

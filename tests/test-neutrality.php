@@ -41,12 +41,19 @@ function facr_plugin_files( string $root ): array {
 $files = facr_plugin_files( $facr_root );
 facr_assert( 'plugin has files to scan', count( $files ) > 0 );
 
-$branded = [];
+// Nothing of the private store this plugin was extracted from may be identifiable
+// in the published files — its name, its market, its products, its currency —
+// examples and prose included.
+$facr_branding = '/ovride|coffee|romania|\blei\b|\bron\b/i';
+$branded       = [];
 foreach ( $files as $file ) {
+  $src = (string) file_get_contents( $file );
   if ( basename( $file ) === 'test-neutrality.php' ) {
-    continue; // this file necessarily contains the banned word
+    // Only this file's own denylist line necessarily contains the banned words;
+    // the rest of it is scanned like any other file.
+    $src = str_replace( $facr_branding, '', $src );
   }
-  if ( preg_match( '/ovride/i', (string) file_get_contents( $file ) ) ) {
+  if ( preg_match( $facr_branding, $src ) ) {
     $branded[] = $file;
   }
 }
@@ -69,7 +76,7 @@ foreach ( $files as $file ) {
 facr_assert( 'every translated string uses the fa-commission-rules domain: ' . implode( ', ', $wrong_domain ), $wrong_domain === [] );
 
 // The needle is built from two parts so this very check does not trip on its
-// own source — no basename exclusion needed, unlike the "ovride" scan above.
+// own source — no self-exclusion needed, unlike the branding scan above.
 $userpath_needle = '/' . 'Users' . '/';
 $userpaths        = [];
 foreach ( $files as $file ) {

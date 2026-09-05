@@ -46,6 +46,8 @@ final class Strings {
       'status_global'        => __( 'Global (Fluent)', 'fa-commission-rules' ),
       'status_inactive'      => __( 'Inactive', 'fa-commission-rules' ),
       'status_effective'     => __( 'Effective', 'fa-commission-rules' ),
+      'status_scheduled'     => __( 'Scheduled', 'fa-commission-rules' ),
+      'status_expired'       => __( 'Expired', 'fa-commission-rules' ),
       /* translators: %s: the narrower rule that takes precedence for some products */
       'badge_shadow'         => __( 'Overridden for some products by: %s', 'fa-commission-rules' ),
       /* translators: 1: who the narrower rule applies to, 2: the products it targets */
@@ -112,7 +114,7 @@ final class Strings {
       'cancel'               => __( 'Cancel', 'fa-commission-rules' ),
 
       // Live "Result:" sentence (mirrors Labels::describe()).
-      /* translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Coffee") */
+      /* translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Headphones") */
       'sentence'             => __( '%1$s earns %2$s on %3$s.', 'fa-commission-rules' ),
       /* translators: %s: the start date the rule takes effect */
       'sentence_from'        => __( ' From %s.', 'fa-commission-rules' ),

@@ -106,6 +106,22 @@ $rules = [
 $out = Resolver::resolve( $ctx, 100.0, [ facr_line( 44, 100.0, [ 12 => 0 ] ) ], $rules, $now, $base );
 facr_rt( 'newest rule wins an exact tie', $out['lines'][0]['rule_id'] === 'newer' );
 
+// 5b. Two rules saved in the same second are still ordered: Store mints created_at
+// with microseconds and every comparison of it is a plain string compare, so the
+// microsecond digits decide rather than array order. A second-precision stamp
+// still sorts before a fractional one in the same second ('+' < '.').
+$rules = [
+  facr_rule( [ 'id' => 'micro-newer', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'category', 'target_ids' => [ 12 ], 'rate' => 7.0, 'created_at' => '2026-05-01T00:00:00.000917+00:00' ] ),
+  facr_rule( [ 'id' => 'micro-older', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'category', 'target_ids' => [ 12 ], 'rate' => 6.0, 'created_at' => '2026-05-01T00:00:00.000042+00:00' ] ),
+];
+$out = Resolver::resolve( $ctx, 100.0, [ facr_line( 44, 100.0, [ 12 => 0 ] ) ], $rules, $now, $base );
+facr_rt( 'a microsecond newer rule wins the tie regardless of array order', $out['lines'][0]['rule_id'] === 'micro-newer' );
+$eff = Resolver::effective( $rules, $ctx, $now );
+facr_rt( 'effective() picks the microsecond newer rule too', count( $eff ) === 1 && $eff[0]['id'] === 'micro-newer' );
+$rules[] = facr_rule( [ 'id' => 'second-precision', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'category', 'target_ids' => [ 12 ], 'rate' => 5.0, 'created_at' => '2026-05-01T00:00:00+00:00' ] );
+$out     = Resolver::resolve( $ctx, 100.0, [ facr_line( 44, 100.0, [ 12 => 0 ] ) ], $rules, $now, $base );
+facr_rt( 'an existing second-precision stamp is older than a fractional one in the same second', $out['lines'][0]['rule_id'] === 'micro-newer' );
+
 // 6. Date windows.
 $rules = [
   facr_rule( [ 'id' => 'expired', 'scope_type' => 'affiliate', 'scope_id' => 7, 'rate' => 20.0, 'ends_at' => '2026-08-31' ] ),

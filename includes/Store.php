@@ -187,6 +187,10 @@ final class Store {
     $rate      = (float) $raw_rate;
     if ( $raw_rate === '' || ! is_numeric( $raw_rate ) ) {
       $errors['rate'] = __( 'Enter a commission rate.', 'fa-commission-rules' );
+    } elseif ( ! is_finite( $rate ) || $rate > 1000000 ) {
+      // '1e309' is numeric and casts to INF, which would be stored as a flat rate
+      // and paid out on every matching line. Bound it well above any real rate.
+      $errors['rate'] = __( 'The rate must be a finite number up to 1,000,000.', 'fa-commission-rules' );
     } elseif ( $rate < 0 ) {
       $errors['rate'] = __( 'The rate cannot be negative.', 'fa-commission-rules' );
     } elseif ( $rate_type === 'percentage' && $rate > 100 ) {
@@ -221,7 +225,7 @@ final class Store {
         'note'        => mb_substr( sanitize_text_field( (string) ( $input['note'] ?? '' ) ), 0, 200 ),
         'created_at'  => (string) ( $input['created_at'] ?? '' ) !== ''
           ? (string) $input['created_at']
-          : gmdate( 'c' ),
+          : self::now_stamp(),
         'readonly'    => false,
       ]
     );
@@ -332,6 +336,26 @@ final class Store {
   }
 
   /**
+   * An ISO-8601 UTC stamp with microseconds.
+   *
+   * created_at is the newest-wins tie-break — real money — and two rules saved in
+   * the same second used to be indistinguishable, so which one won was down to
+   * array order. Every comparison of it is a plain strcmp (Store::all()'s sort,
+   * Resolver::winning_rule(), Resolver::effective()), and ISO-8601 UTC strings
+   * are lexically ordered, so this stays consistent with the second-precision
+   * stamps already stored: '...:00+00:00' sorts BEFORE '...:00.000001+00:00'
+   * because '+' (0x2B) precedes '.' (0x2E), i.e. an existing rule is still older
+   * than one minted later in the same second. The Fluent synthetic rows' epoch
+   * stamp keeps losing every tie-break.
+   */
+  private static function now_stamp(): string {
+    $now = microtime( true );
+    return gmdate( 'Y-m-d\TH:i:s', (int) $now )
+      . sprintf( '.%06d', (int) ( ( $now - floor( $now ) ) * 1000000 ) )
+      . '+00:00';
+  }
+
+  /**
    * @param array<string,mixed> $rule
    * @return array<string,mixed>
    */
@@ -364,8 +388,15 @@ final class Store {
 
     foreach ( $ids as $id ) {
       if ( $target_type === 'category' ) {
-        $term = get_term( $id, 'product_cat' );
-        if ( ! $term || is_wp_error( $term ) ) {
+        // ponytail: same reasoning as the product branch below — product_cat is
+        // registered by WooCommerce, so with WooCommerce deactivated every id
+        // would look unknown and an existing category rule could not be re-saved.
+        if ( self::category_taxonomy_available() ) {
+          $term = get_term( $id, 'product_cat' );
+          if ( ! $term || is_wp_error( $term ) ) {
+            $unknown[] = (string) $id;
+          }
+        } elseif ( $id <= 0 ) {
           $unknown[] = (string) $id;
         }
         continue;
@@ -384,6 +415,11 @@ final class Store {
     }
 
     return $unknown;
+  }
+
+  /** Only WooCommerce registers product_cat; without it no id can be resolved. */
+  private static function category_taxonomy_available(): bool {
+    return taxonomy_exists( 'product_cat' );
   }
 
   private static function clean_date( string $value ): string {

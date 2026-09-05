@@ -20,9 +20,13 @@ final class Fluent {
   public const MIN_VERSION = '1.6';
 
   public static function ready(): bool {
+    // Every class this file calls WITHOUT its own class_exists() guard has to be
+    // checked here: a Fluent refactor that moves one of them should degrade to
+    // the plugin's "missing dependency" notice, not a fatal on every request.
     return defined( 'FLUENT_AFFILIATE_VERSION' )
       && version_compare( (string) FLUENT_AFFILIATE_VERSION, self::MIN_VERSION, '>=' )
-      && class_exists( Affiliate::class );
+      && class_exists( Affiliate::class )
+      && class_exists( Utility::class );
   }
 
   public static function has_pro(): bool {

@@ -200,6 +200,11 @@ final class Controller {
       return new WP_Error( 'facr_missing', __( 'That rule no longer exists.', 'fa-commission-rules' ), [ 'status' => 404 ] );
     }
 
+    $invalid = self::invalid_fields( $body );
+    if ( $invalid ) {
+      return new WP_REST_Response( [ 'errors' => $invalid ], 422 );
+    }
+
     $target_ids = [];
     foreach ( (array) ( $body['target_ids'] ?? [] ) as $target_id ) {
       $target_ids[] = (int) self::scalar( $target_id );
@@ -240,6 +245,60 @@ final class Controller {
       ],
       $id === '' ? 201 : 200
     );
+  }
+
+  /**
+   * Fields the body sent but that cannot be read as sent.
+   *
+   * scalar() flattens an array to '' and Store::validate() then falls back to the
+   * WIDEST value of every enum — all/percentage/active — so a malformed submit
+   * would quietly save a broader, live, differently-priced rule than the one the
+   * client meant. Refuse instead. A field the body omits is untouched: absent
+   * still means "use the default".
+   *
+   * @param array<string,mixed> $body
+   * @return array<string,string>
+   */
+  private static function invalid_fields( array $body ): array {
+    $enums = [
+      'scope_type'  => Store::SCOPES,
+      'target_type' => Store::TARGETS,
+      'rate_type'   => Store::RATE_TYPES,
+      'status'      => Store::STATUSES,
+    ];
+    /* translators: shown under one field of the rule editor when the submitted value could not be read at all. */
+    $message = __( 'Invalid value.', 'fa-commission-rules' );
+    $errors  = [];
+
+    foreach ( [ 'scope_type', 'target_type', 'rate_type', 'status', 'starts_at', 'ends_at', 'rate', 'scope_id', 'note' ] as $field ) {
+      if ( ! array_key_exists( $field, $body ) ) {
+        continue;
+      }
+      $value = $body[ $field ];
+      if ( ! is_scalar( $value ) ) {
+        $errors[ $field ] = $message;
+        continue;
+      }
+      if ( isset( $enums[ $field ] ) && ! in_array( (string) $value, $enums[ $field ], true ) ) {
+        $errors[ $field ] = $message;
+      }
+    }
+
+    if ( array_key_exists( 'target_ids', $body ) ) {
+      $ids = $body['target_ids'];
+      if ( ! is_array( $ids ) ) {
+        $errors['target_ids'] = $message;
+      } else {
+        foreach ( $ids as $id ) {
+          if ( ! is_scalar( $id ) ) {
+            $errors['target_ids'] = $message;
+            break;
+          }
+        }
+      }
+    }
+
+    return $errors;
   }
 
   /** @return WP_REST_Response|WP_Error */

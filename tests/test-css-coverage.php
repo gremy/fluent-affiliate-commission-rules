@@ -37,6 +37,7 @@ facr_css( 'app.js contains no hard-coded English UI text (every visible string c
 
 if ( ! is_readable( $facr_fluent ) || ! is_readable( $facr_theme ) ) {
   echo "SKIP fluent-affiliate/assets/admin/app.min.css or admin.css not found next to this plugin: component css coverage not checked\n";
+  $GLOBALS['facr_css_skipped'] = true;
 } else {
   $facr_css_all = (string) file_get_contents( $facr_fluent ) . "\n" . (string) file_get_contents( $facr_theme );
 

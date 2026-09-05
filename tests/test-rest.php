@@ -49,15 +49,19 @@ if ( ! function_exists( 'facr_rest_call' ) ) {
 
 if ( ! Fluent::ready() ) {
   echo "SKIP Fluent Affiliate is not active\n";
+  $GLOBALS['facr_rest_skipped'] = true;
   return;
 }
 
 if ( ! empty( Fluent::get_option( FACR_RULES_KEY, [] ) ) ) {
   echo "SKIP this store already has commission rules: the REST test writes to the rule collection, so it only runs against an empty store\n";
+  $GLOBALS['facr_rest_skipped'] = true;
   return;
 }
 
 $facr_r_backup  = Fluent::get_option( FACR_RULES_KEY, [] );
+$facr_r_woo_backup = Fluent::get_option( '_woo_connector_config', [] );
+$facr_r_users   = []; // only ids this file actually created; nothing else is ever deleted.
 $facr_r_admin   = 0;
 $facr_r_sub     = 0;
 $facr_r_aff_usr = 0;
@@ -69,9 +73,30 @@ $facr_r_prev    = get_current_user_id();
 
 try {
   // ------------------------------------------------------------ fixtures ---
-  $facr_r_admin = (int) wp_insert_user( [ 'user_login' => 'facr_rest_admin_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_rest_admin_' . wp_rand() . '@example.test', 'role' => 'administrator' ] );
-  $facr_r_sub   = (int) wp_insert_user( [ 'user_login' => 'facr_rest_sub_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_rest_sub_' . wp_rand() . '@example.test', 'role' => 'subscriber' ] );
-  $facr_r_aff_usr = (int) wp_insert_user( [ 'user_login' => 'facr_rest_aff_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_rest_aff_' . wp_rand() . '@example.test', 'first_name' => 'Rest', 'last_name' => 'Affiliate' ] );
+  // wp_insert_user() returns WP_Error on failure, and (int) WP_Error is 1 — the
+  // site administrator. Never cast blind: keep the raw result, bail on an error,
+  // and only ever delete ids this block confirmed it created.
+  foreach (
+    [
+      'admin' => [ 'user_login' => 'facr_rest_admin_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_rest_admin_' . wp_rand() . '@example.test', 'role' => 'administrator' ],
+      'sub'   => [ 'user_login' => 'facr_rest_sub_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_rest_sub_' . wp_rand() . '@example.test', 'role' => 'subscriber' ],
+      'aff'   => [ 'user_login' => 'facr_rest_aff_' . wp_rand(), 'user_pass' => wp_generate_password( 20 ), 'user_email' => 'facr_rest_aff_' . wp_rand() . '@example.test', 'first_name' => 'Rest', 'last_name' => 'Affiliate' ],
+    ] as $facr_r_which => $facr_r_args
+  ) {
+    $facr_r_created_user = wp_insert_user( $facr_r_args );
+    if ( is_wp_error( $facr_r_created_user ) || (int) $facr_r_created_user <= 0 ) {
+      facr_rest( "fixture user ({$facr_r_which}) created", false );
+      return;
+    }
+    $facr_r_users[] = (int) $facr_r_created_user;
+    if ( $facr_r_which === 'admin' ) {
+      $facr_r_admin = (int) $facr_r_created_user;
+    } elseif ( $facr_r_which === 'sub' ) {
+      $facr_r_sub = (int) $facr_r_created_user;
+    } else {
+      $facr_r_aff_usr = (int) $facr_r_created_user;
+    }
+  }
   $facr_r_aff = \FluentAffiliate\App\Models\Affiliate::create( [ 'user_id' => $facr_r_aff_usr, 'status' => 'active', 'rate_type' => 'percentage', 'rate' => 5, 'group_id' => 0 ] );
   $facr_r_aff_id = (int) $facr_r_aff->id;
 
@@ -86,7 +111,8 @@ try {
     }
   }
   if ( Fluent::has_woo() ) {
-    $facr_r_product = (int) wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Rest Product Zebra', 'post_status' => 'publish' ] );
+    $facr_r_new_post = wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Rest Product Zebra', 'post_status' => 'publish' ], true );
+    $facr_r_product  = is_wp_error( $facr_r_new_post ) ? 0 : (int) $facr_r_new_post;
     if ( function_exists( 'wc_get_product' ) && $facr_r_product > 0 ) {
       // search_products() reads the product lookup table; save through WC so the row exists.
       $facr_r_wc = wc_get_product( $facr_r_product );
@@ -121,13 +147,33 @@ try {
   facr_rest( 'index has rules, shadow, tie and default_rate', isset( $facr_r_data['rules'], $facr_r_data['shadow'], $facr_r_data['tie'] ) && array_key_exists( 'default_rate', $facr_r_data ) );
   facr_rest( 'shadow and tie serialise as objects even when empty', is_object( $facr_r_data['shadow'] ) && is_object( $facr_r_data['tie'] ) );
   facr_rest( 'default_rate is the label helper output', $facr_r_data['default_rate'] === \FACommissionRules\Labels::default_rate_label() );
+  // Seed one of Fluent's own global rate rows so this is not a vacuous check on a
+  // store that has none. Its shape is what Store::fluent_global_rules() reads:
+  // the gate, a non-empty watched-id list, and one row of the rate table.
+  Fluent::update_option(
+    '_woo_connector_config',
+    [
+      'custom_affiliate_rate'  => 'yes',
+      'watched_product_ids'    => [ 4242 ],
+      'custom_affiliate_rates' => [
+        [ 'object_type' => 'product', 'object_ids' => [ 4242 ], 'rate' => '12', 'rate_type' => 'percentage' ],
+      ],
+    ]
+  );
+  $facr_r_data      = (array) facr_rest_call( 'GET', '/rules' )->get_data();
   $facr_r_fluent_ok = true;
+  $facr_r_fluent_n  = 0;
   foreach ( (array) $facr_r_data['rules'] as $facr_r_row ) {
-    if ( strncmp( (string) $facr_r_row['id'], 'fluent:', 7 ) === 0 && empty( $facr_r_row['readonly'] ) ) {
-      $facr_r_fluent_ok = false;
+    if ( strncmp( (string) $facr_r_row['id'], 'fluent:', 7 ) === 0 ) {
+      $facr_r_fluent_n++;
+      if ( empty( $facr_r_row['readonly'] ) ) {
+        $facr_r_fluent_ok = false;
+      }
     }
   }
+  facr_rest( "GET /rules lists Fluent's own global row", $facr_r_fluent_n > 0 );
   facr_rest( 'fluent rows carry readonly true', $facr_r_fluent_ok );
+  Fluent::update_option( '_woo_connector_config', $facr_r_woo_backup );
 
   [ $facr_r_rule ] = Store::validate( [ 'scope_type' => 'affiliate', 'scope_id' => (string) $facr_r_aff_id, 'target_type' => 'all', 'rate' => '12.5', 'rate_type' => 'percentage', 'status' => 'active', 'note' => 'rest read test' ] );
   Store::save( $facr_r_rule );
@@ -156,7 +202,10 @@ try {
         $facr_r_crow = $facr_r_row;
       }
     }
-    facr_rest( 'a category rule lists its target_options', is_array( $facr_r_crow ) && ( $facr_r_crow['target_options'][0]['id'] ?? 0 ) === $facr_r_cat_c && strpos( (string) $facr_r_crow['target_options'][0]['label'], 'FACR Rest Child' ) !== false );
+    // Only the product picker rehydrates from target_options; the category picker
+    // gets the whole tree from GET /options, so a category rule ships none.
+    facr_rest( 'a category rule ships no target_options', is_array( $facr_r_crow ) && $facr_r_crow['target_options'] === [] );
+    facr_rest( 'a category rule still gets a server-built target label', is_array( $facr_r_crow ) && strpos( (string) $facr_r_crow['labels']['target'], 'FACR Rest Child' ) !== false );
     Store::delete( $facr_r_crule['id'] );
   } else {
     echo "SKIP no product_cat taxonomy: category target_options not exercised\n";
@@ -228,6 +277,25 @@ try {
   $facr_r_arrays = facr_rest_call( 'POST', '/rules', [ 'scope_type' => [ 'affiliate' ], 'scope_id' => [ $facr_r_aff_id ], 'target_type' => 'all', 'rate' => [ '10' ], 'rate_type' => [ 'flat' ], 'note' => [ 'x' ] ] );
   facr_rest( 'arrays where scalars are expected are rejected, not fatal', $facr_r_arrays->get_status() === 422 && isset( $facr_r_arrays->get_data()['errors']['rate'] ) );
 
+  // A malformed field must never fall through to Store::validate()'s defaults:
+  // those are the WIDEST values (all / percentage / active), so a broken submit
+  // would silently save a live rule that pays on everything.
+  $facr_r_arr_scope = facr_rest_call( 'POST', '/rules', [ 'scope_type' => [ 'affiliate' ], 'scope_id' => (string) $facr_r_aff_id, 'target_type' => 'all', 'rate' => '10', 'rate_type' => 'percentage' ] );
+  facr_rest( 'an array scope_type is 422 on scope_type, not silently widened to all', $facr_r_arr_scope->get_status() === 422 && isset( $facr_r_arr_scope->get_data()['errors']['scope_type'] ) );
+  $facr_r_bad_enum = facr_rest_call( 'POST', '/rules', [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '10', 'rate_type' => 'bogus' ] );
+  facr_rest( 'an unknown rate_type is 422, not silently a percentage', $facr_r_bad_enum->get_status() === 422 && isset( $facr_r_bad_enum->get_data()['errors']['rate_type'] ) );
+  $facr_r_arr_date = facr_rest_call( 'POST', '/rules', [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '10', 'rate_type' => 'percentage', 'starts_at' => [ '2026-01-01' ] ] );
+  facr_rest( 'an array starts_at is 422 on starts_at', $facr_r_arr_date->get_status() === 422 && isset( $facr_r_arr_date->get_data()['errors']['starts_at'] ) );
+  $facr_r_bad_ids = facr_rest_call( 'POST', '/rules', [ 'scope_type' => 'all', 'target_type' => 'product', 'target_ids' => 'not-an-array', 'rate' => '10', 'rate_type' => 'percentage' ] );
+  facr_rest( 'a non-array target_ids is 422 on target_ids', $facr_r_bad_ids->get_status() === 422 && isset( $facr_r_bad_ids->get_data()['errors']['target_ids'] ) );
+  $facr_r_bad_status = facr_rest_call( 'POST', '/rules', [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '10', 'rate_type' => 'percentage', 'status' => 'enabled' ] );
+  facr_rest( 'an unknown status is 422, not silently active', $facr_r_bad_status->get_status() === 422 && isset( $facr_r_bad_status->get_data()['errors']['status'] ) );
+  facr_rest( 'no malformed submit wrote a rule', Store::all() === [] );
+  // Omitting a field is still fine: absent means "use the default".
+  $facr_r_defaults = facr_rest_call( 'POST', '/rules', [ 'rate' => '4', 'rate_type' => 'percentage' ] );
+  facr_rest( 'a body that omits the optional fields still saves', $facr_r_defaults->get_status() === 201 && ( $facr_r_defaults->get_data()['rule']['scope_type'] ?? '' ) === 'all' );
+  Store::delete( (string) ( $facr_r_defaults->get_data()['rule']['id'] ?? '' ) );
+
   $facr_r_created = facr_rest_call(
     'POST',
     '/rules',
@@ -296,6 +364,7 @@ try {
 } finally {
   wp_set_current_user( $facr_r_prev );
   Fluent::update_option( FACR_RULES_KEY, $facr_r_backup );
+  Fluent::update_option( '_woo_connector_config', $facr_r_woo_backup );
   if ( $facr_r_product > 0 ) {
     wp_delete_post( $facr_r_product, true );
   }
@@ -309,8 +378,9 @@ try {
     wp_delete_term( $facr_r_cat_p, 'product_cat' );
   }
   require_once ABSPATH . 'wp-admin/includes/user.php';
-  foreach ( [ $facr_r_admin, $facr_r_sub, $facr_r_aff_usr ] as $facr_r_uid ) {
-    if ( $facr_r_uid > 0 ) {
+  foreach ( $facr_r_users as $facr_r_uid ) {
+    // > 1 as belt and braces: id 1 is never ours to delete, whatever went wrong.
+    if ( $facr_r_uid > 1 ) {
       wp_delete_user( $facr_r_uid );
     }
   }

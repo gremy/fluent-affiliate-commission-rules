@@ -57,7 +57,10 @@ final class Labels {
    * @return array<int,array{id:int,label:string}>
    */
   public static function target_options( array $rule ): array {
-    if ( $rule['target_type'] === 'all' ) {
+    // ponytail: only the product picker rehydrates its selection from these —
+    // the category picker gets the whole tree from GET /options, so computing
+    // them for category rules was a get_term() per id per row for nothing.
+    if ( $rule['target_type'] !== 'product' ) {
       return [];
     }
     $out = [];

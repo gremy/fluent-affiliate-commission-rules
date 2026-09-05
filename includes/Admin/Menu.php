@@ -108,6 +108,9 @@ final class Menu {
         // "$ 0.00" → "$ %s": the live sentence formats flat amounts the way the store does.
         'money_template'    => (string) preg_replace( '/0[.,]00/', '%s', $zero, 1 ),
         'decimal_separator' => strpos( $zero, '0,00' ) !== false ? ',' : '.',
+        // The store's own today, not the browser's: a scheduled/expired badge has
+        // to agree with the dates the server compares rules against.
+        'today'             => wp_date( 'Y-m-d' ),
         'i18n'              => Strings::all(),
       ]
     );
