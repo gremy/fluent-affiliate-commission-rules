@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Commission Rules for Fluent Affiliate
- * Plugin URI:        https://github.com/webbership/fluent-affiliate-commission-rules
+ * Plugin URI:        https://github.com/gremy/fluent-affiliate-commission-rules
  * Description:       Per-affiliate and per-group commission rules for Fluent Affiliate, targeted at a product, a product category, or everything, with an optional date window.
  * Version:           1.1.0
  * Requires at least: 6.6

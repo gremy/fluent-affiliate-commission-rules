@@ -289,6 +289,12 @@ final class Controller {
       }
     }
 
-    return new WP_REST_Response( [ 'count' => $count ] );
+    return new WP_REST_Response(
+      [
+        'count'   => $count,
+        /* translators: %d: number of rules changed by a bulk action. */
+        'message' => sprintf( _n( '%d rule updated.', '%d rules updated.', $count, 'fa-commission-rules' ), $count ),
+      ]
+    );
   }
 }

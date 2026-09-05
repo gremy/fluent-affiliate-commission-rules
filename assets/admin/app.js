@@ -435,8 +435,7 @@
             return;
           }
           api( '/rules/bulk', { method: 'POST', body: { action: action, ids: ids } } ).then( function ( data ) {
-            var count = Number( data.count ) || 0;
-            notify( 'success', H.sprintf( count === 1 ? i18n.bulk_done_one : i18n.bulk_done_many, count ) );
+            notify( 'success', data.message );
             vm.selected = [];
             vm.load();
           }, function ( error ) {

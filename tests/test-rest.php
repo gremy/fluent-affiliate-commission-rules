@@ -280,6 +280,7 @@ try {
   $facr_r_bulk = facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'deactivate', 'ids' => [ $facr_r_ids[0], $facr_r_ids[1], 'fluent:0', [ 'nested' ], 42 ] ] );
   facr_rest( 'bulk deactivate is 200 with the count', $facr_r_bulk->get_status() === 200 && ( $facr_r_bulk->get_data()['count'] ?? -1 ) === 2 );
   facr_rest( 'bulk deactivate flipped exactly those two', ( Store::get( $facr_r_ids[0] )['status'] ?? '' ) === 'inactive' && ( Store::get( $facr_r_ids[1] )['status'] ?? '' ) === 'inactive' && ( Store::get( $facr_r_ids[2] )['status'] ?? '' ) === 'active' );
+  facr_rest( 'bulk response carries a server-built message with the real count', strpos( (string) ( $facr_r_bulk->get_data()['message'] ?? '' ), '2' ) !== false );
   facr_rest( 'bulk activate is 200 with the count', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'activate', 'ids' => $facr_r_ids ] )->get_data()['count'] ?? -1 ) === 2 );
   facr_rest( 'bulk with an unknown action is 400', facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'explode', 'ids' => $facr_r_ids ] )->get_status() === 400 );
   facr_rest( 'bulk with no usable ids is 200 count 0', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'delete', 'ids' => [ 'fluent:0', 'fluent:renewal:1' ] ] )->get_data()['count'] ?? -1 ) === 0 );
