@@ -1,0 +1,277 @@
+<?php
+declare(strict_types=1);
+/**
+ * WordPress + Fluent Affiliate integration tests for the commission-rules plugin.
+ * Run: wp --path=/path/to/wp eval-file wp-content/plugins/fluent-affiliate-commission-rules/tests/test-integration.php
+ *
+ * Creates its own affiliate, group and rules and removes them in a finally block.
+ */
+
+use FACommissionRules\Fluent;
+use FACommissionRules\Store;
+
+if ( ! defined( 'ABSPATH' ) ) {
+  fwrite( STDERR, "test-integration.php needs WordPress: run it with wp eval-file\n" );
+  return;
+}
+
+$GLOBALS['facr_int_fail'] = $GLOBALS['facr_int_fail'] ?? 0;
+
+if ( ! function_exists( 'facr_it' ) ) {
+  function facr_it( string $label, bool $ok ): void {
+    if ( $ok ) {
+      echo "PASS {$label}\n";
+      return;
+    }
+    $GLOBALS['facr_int_fail']++;
+    echo "FAIL {$label}\n";
+  }
+}
+
+if ( ! Fluent::ready() ) {
+  echo "SKIP Fluent Affiliate is not active\n";
+  return;
+}
+
+$facr_backup      = Fluent::get_option( FACR_RULES_KEY, [] );
+$facr_woo_backup  = Fluent::get_option( '_woo_connector_config', [] );
+$facr_group_id    = 0;
+$facr_aff_id      = 0;
+$facr_user_id     = 0;
+$facr_cat_parent  = 0;
+$facr_cat_child   = 0;
+$facr_product_id  = 0;
+$facr_product_b   = 0;
+
+try {
+  // ------------------------------------------------------------ fixtures ---
+  // One affiliate, one group and one two-level product_cat tree, reused by every
+  // later section of this file so validation can check that ids really exist.
+  if ( Fluent::has_pro() ) {
+    $facr_group = \FluentAffiliate\App\Models\AffiliateGroup::create(
+      [
+        'meta_key' => 'FACR Test Group ' . wp_rand(),
+        'value'    => [ 'rate_type' => 'percentage', 'rate' => 5, 'status' => 'active', 'notes' => '' ],
+      ]
+    );
+    $facr_group_id = (int) $facr_group->id;
+  }
+
+  $facr_new_user = wp_insert_user(
+    [
+      'user_login' => 'facr_test_' . wp_rand(),
+      'user_email' => 'facr_test_' . wp_rand() . '@example.test',
+      'user_pass'  => wp_generate_password( 20 ),
+    ]
+  );
+  if ( is_wp_error( $facr_new_user ) ) {
+    echo 'SKIP could not create a test user: ' . $facr_new_user->get_error_message() . "\n";
+    return;
+  }
+  $facr_user_id = (int) $facr_new_user;
+
+  $facr_aff = \FluentAffiliate\App\Models\Affiliate::create(
+    [
+      'user_id'   => $facr_user_id,
+      'status'    => 'active',
+      'rate_type' => 'percentage',
+      'rate'      => 5,
+      'group_id'  => $facr_group_id,
+    ]
+  );
+  $facr_aff_id = (int) $facr_aff->id;
+
+  if ( taxonomy_exists( 'product_cat' ) ) {
+    $facr_parent_term = wp_insert_term( 'FACR Parent ' . wp_rand(), 'product_cat' );
+    if ( ! is_wp_error( $facr_parent_term ) ) {
+      $facr_cat_parent = (int) $facr_parent_term['term_id'];
+      $facr_child_term = wp_insert_term( 'FACR Child ' . wp_rand(), 'product_cat', [ 'parent' => $facr_cat_parent ] );
+      if ( ! is_wp_error( $facr_child_term ) ) {
+        $facr_cat_child = (int) $facr_child_term['term_id'];
+      }
+    }
+  }
+
+  if ( Fluent::has_woo() ) {
+    $facr_product_id = (int) wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Test Product A', 'post_status' => 'publish' ] );
+    $facr_product_b  = (int) wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Test Product B', 'post_status' => 'publish' ] );
+    if ( $facr_cat_child > 0 ) {
+      wp_set_object_terms( $facr_product_id, [ $facr_cat_child ], 'product_cat' );
+    }
+  }
+
+  // Fluent's own global rate tables would otherwise price these test orders from
+  // whatever the live store happens to have configured. Off for the whole run;
+  // the adapter section switches them on deliberately and switches them back.
+  $facr_neutral_woo = array_merge(
+    is_array( $facr_woo_backup ) ? $facr_woo_backup : [],
+    [ 'custom_affiliate_rate' => 'no', 'renewal_custom_affiliate_rate' => 'no' ]
+  );
+  Fluent::update_option( '_woo_connector_config', $facr_neutral_woo );
+
+  // ---------------------------------------------------------------- store ---
+  Fluent::update_option( FACR_RULES_KEY, [] );
+  facr_it( 'store starts empty', Store::all() === [] );
+
+  [ $rule, $errors ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'target_ids'  => [],
+      'rate'        => '10.5',
+      'rate_type'   => 'percentage',
+      'starts_at'   => '',
+      'ends_at'     => '',
+      'note'        => 'Year-1 rate',
+      'status'      => 'active',
+    ]
+  );
+  facr_it( 'valid input produces no errors', $errors === [] );
+  facr_it( 'validate casts scope_id to int', $rule['scope_id'] === $facr_aff_id );
+  facr_it( 'validate casts rate to float', $rule['rate'] === 10.5 );
+  facr_it( 'validate mints a uuid id', (bool) preg_match( '/^[0-9a-f-]{36}$/', $rule['id'] ) );
+  facr_it( 'validate stamps created_at', $rule['created_at'] !== '' );
+
+  Store::save( $rule );
+  facr_it( 'saved rule is readable', ( Store::get( $rule['id'] )['note'] ?? '' ) === 'Year-1 rate' );
+  facr_it( 'saved rule is listed once', count( Store::all() ) === 1 );
+
+  $edited          = Store::get( $rule['id'] );
+  $edited['rate']  = 12.0;
+  Store::save( $edited );
+  facr_it( 'saving an existing id updates in place', count( Store::all() ) === 1 && Store::get( $rule['id'] )['rate'] === 12.0 );
+
+  facr_it( 'for_scope finds the rule', count( Store::for_scope( 'affiliate', $facr_aff_id ) ) === 1 );
+  facr_it( 'for_scope ignores other scopes', Store::for_scope( 'affiliate', $facr_aff_id + 100000 ) === [] );
+
+  Store::set_status( [ $rule['id'] ], 'inactive' );
+  facr_it( 'set_status flips status', Store::get( $rule['id'] )['status'] === 'inactive' );
+
+  // ------------------------------------------------------------ validation ---
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'affiliate', 'scope_id' => '0', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
+  facr_it( 'affiliate scope requires an id', isset( $errors['scope_id'] ) );
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'affiliate', 'scope_id' => (string) ( $facr_aff_id + 100000 ), 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
+  facr_it( 'an unknown affiliate id is rejected', isset( $errors['scope_id'] ) );
+
+  if ( Fluent::has_pro() && $facr_group_id > 0 ) {
+    [ , $errors ] = Store::validate( [ 'scope_type' => 'group', 'scope_id' => (string) $facr_group_id, 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
+    facr_it( 'a real group id validates', $errors === [] );
+    [ , $errors ] = Store::validate( [ 'scope_type' => 'group', 'scope_id' => (string) ( $facr_group_id + 100000 ), 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
+    facr_it( 'an unknown group id is rejected', isset( $errors['scope_id'] ) );
+  } else {
+    echo "SKIP Fluent Affiliate Pro inactive: group scope validation not exercised\n";
+  }
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'product', 'target_ids' => [], 'rate' => '5', 'rate_type' => 'percentage' ] );
+  facr_it( 'product target requires ids', isset( $errors['target_ids'] ) );
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'target_ids' => [ '44' ], 'rate' => '5', 'rate_type' => 'percentage' ] );
+  facr_it( 'an all-products rule may not carry target ids', isset( $errors['target_ids'] ) );
+
+  if ( $facr_cat_child > 0 ) {
+    [ $facr_crule, $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'category', 'target_ids' => [ (string) $facr_cat_child, (string) $facr_cat_parent ], 'rate' => '5', 'rate_type' => 'percentage' ] );
+    facr_it( 'real category targets validate', $errors === [] );
+    facr_it( 'validate casts target_ids to ints', $facr_crule['target_ids'] === [ $facr_cat_child, $facr_cat_parent ] );
+
+    [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'category', 'target_ids' => [ (string) ( $facr_cat_parent + 900000 ) ], 'rate' => '5', 'rate_type' => 'percentage' ] );
+    facr_it( 'an unknown category id is rejected', isset( $errors['target_ids'] ) );
+  } else {
+    echo "SKIP no product_cat taxonomy: category target validation not exercised\n";
+  }
+
+  if ( Fluent::has_woo() ) {
+    [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'product', 'target_ids' => [ '999999999' ], 'rate' => '5', 'rate_type' => 'percentage' ] );
+    facr_it( 'an unknown product id is rejected', isset( $errors['target_ids'] ) );
+  } else {
+    echo "SKIP WooCommerce inactive: product target validation not exercised\n";
+  }
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '140', 'rate_type' => 'percentage' ] );
+  facr_it( 'percentage rate is capped at 100', isset( $errors['rate'] ) );
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '-1', 'rate_type' => 'flat' ] );
+  facr_it( 'flat rate cannot be negative', isset( $errors['rate'] ) );
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'starts_at' => '2026-10-01', 'ends_at' => '2026-09-01' ] );
+  facr_it( 'ends_at must not precede starts_at', isset( $errors['ends_at'] ) );
+
+  [ , $errors ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'starts_at' => '01/10/2026' ] );
+  facr_it( 'dates must be Y-m-d', isset( $errors['starts_at'] ) );
+
+  // ------------------------------------------------------------- cleanup ----
+  Store::forget_affiliate( $facr_aff_id );
+  facr_it( 'forget_affiliate drops that affiliate rules', Store::all() === [] );
+
+  // --------------------------------------------- Fluent global rows adapter --
+  Fluent::update_option(
+    '_woo_connector_config',
+    array_merge(
+      $facr_neutral_woo,
+      [
+        'custom_affiliate_rate'  => 'yes',
+        'custom_affiliate_rates' => [
+          [ 'object_type' => 'category', 'object_ids' => [ 44 ], 'rate' => '0', 'rate_type' => 'percentage' ],
+          [ 'object_type' => 'product', 'object_ids' => [ 101 ], 'rate' => '3', 'rate_type' => 'flat' ],
+        ],
+      ]
+    )
+  );
+  $globals = Store::fluent_global_rules();
+  facr_it( 'fluent rows are adapted', count( $globals ) === 2 );
+  facr_it( 'fluent rows are scope all', $globals[0]['scope_type'] === 'all' && $globals[0]['scope_id'] === 0 );
+  facr_it( 'fluent rows carry a synthetic id', $globals[0]['id'] === 'fluent:0' );
+  facr_it( 'fluent rows are read-only', $globals[0]['readonly'] === true );
+  facr_it( 'fluent rows lose ties (epoch created_at)', $globals[0]['created_at'] === '1970-01-01T00:00:00+00:00' );
+  facr_it( 'fluent product row keeps rate type', $globals[1]['rate_type'] === 'flat' && $globals[1]['rate'] === 3.0 );
+  facr_it( 'the sale table is not read for renewals', Store::fluent_global_rules( 'renewal' ) === [] );
+
+  // Fluent keeps a second, independent rate table for renewals in the same option.
+  Fluent::update_option(
+    '_woo_connector_config',
+    array_merge(
+      $facr_neutral_woo,
+      [
+        'custom_affiliate_rate'          => 'no',
+        'renewal_custom_affiliate_rate'  => 'yes',
+        'renewal_custom_affiliate_rates' => [
+          [ 'object_type' => 'product', 'object_ids' => [ 101 ], 'rate' => '7', 'rate_type' => 'percentage' ],
+        ],
+      ]
+    )
+  );
+  $renewal_globals = Store::fluent_global_rules( 'renewal' );
+  facr_it( 'the renewal table is adapted', count( $renewal_globals ) === 1 && $renewal_globals[0]['rate'] === 7.0 );
+  facr_it( 'renewal rows carry their own synthetic id', $renewal_globals[0]['id'] === 'fluent:renewal:0' );
+  facr_it( 'the renewal table is not read for sales', Store::fluent_global_rules() === [] );
+  facr_it( 'resolvable passes the context through', Store::resolvable( 'renewal' ) === Store::fluent_global_rules( 'renewal' ) );
+
+  Fluent::update_option( '_woo_connector_config', $facr_neutral_woo );
+} finally {
+  Fluent::update_option( FACR_RULES_KEY, $facr_backup );
+  Fluent::update_option( '_woo_connector_config', $facr_woo_backup );
+  foreach ( [ $facr_product_id, $facr_product_b ] as $facr_dead_product ) {
+    if ( ! empty( $facr_dead_product ) ) {
+      wp_delete_post( (int) $facr_dead_product, true );
+    }
+  }
+  if ( ! empty( $facr_aff_id ) ) {
+    \FluentAffiliate\App\Models\Affiliate::where( 'id', $facr_aff_id )->delete();
+  }
+  if ( ! empty( $facr_group_id ) ) {
+    \FluentAffiliate\App\Models\AffiliateGroup::where( 'id', $facr_group_id )->delete();
+  }
+  if ( ! empty( $facr_cat_child ) ) {
+    wp_delete_term( $facr_cat_child, 'product_cat' );
+  }
+  if ( ! empty( $facr_cat_parent ) ) {
+    wp_delete_term( $facr_cat_parent, 'product_cat' );
+  }
+  if ( ! empty( $facr_user_id ) ) {
+    require_once ABSPATH . 'wp-admin/includes/user.php';
+    wp_delete_user( $facr_user_id );
+  }
+}
+
+echo $GLOBALS['facr_int_fail'] ? "\n{$GLOBALS['facr_int_fail']} FAILURES\n" : "\nAll integration checks passed\n";
