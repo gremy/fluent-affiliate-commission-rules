@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-05T04:57:55+00:00\n"
+"POT-Creation-Date: 2026-09-05T05:01:51+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: fa-commission-rules\n"
@@ -46,175 +46,175 @@ msgid "Commission rules"
 msgstr ""
 
 #. translators: 1: who the rule applies to, 2: what the rule does
-#: includes/Admin/RuleForm.php:113
-#: includes/Admin/RuleForm.php:444
+#: includes/Admin/RuleForm.php:129
+#: includes/Admin/RuleForm.php:460
 #, php-format
 msgid "%1$s — %2$s"
 msgstr ""
 
 #. translators: %d: number of rules changed
-#: includes/Admin/RuleForm.php:158
+#: includes/Admin/RuleForm.php:174
 #, php-format
 msgid "%d rule updated."
 msgid_plural "%d rules updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Admin/RuleForm.php:170
-#: includes/Admin/RuleForm.php:183
+#: includes/Admin/RuleForm.php:186
+#: includes/Admin/RuleForm.php:199
 #: includes/Admin/RulesPage.php:21
 msgid "You do not have permission to manage commission rules."
 msgstr ""
 
-#: includes/Admin/RuleForm.php:227
+#: includes/Admin/RuleForm.php:243
 msgid "Edit commission rule"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:227
+#: includes/Admin/RuleForm.php:243
 msgid "Add commission rule"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:239
+#: includes/Admin/RuleForm.php:255
 msgid "Applies to"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:241
+#: includes/Admin/RuleForm.php:257
 #: includes/Admin/RulesPage.php:98
 #: includes/Admin/RulesPage.php:307
 #: includes/Admin/Widgets.php:60
 msgid "Everyone"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:243
+#: includes/Admin/RuleForm.php:259
 msgid "An affiliate group"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:245
+#: includes/Admin/RuleForm.php:261
 msgid "One affiliate"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:254
+#: includes/Admin/RuleForm.php:270
 msgid "— choose —"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:281
+#: includes/Admin/RuleForm.php:297
 msgid "For the products"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:283
+#: includes/Admin/RuleForm.php:299
 #: includes/Admin/RulesPage.php:108
 #: includes/Admin/RulesPage.php:314
 msgid "All products"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:285
+#: includes/Admin/RuleForm.php:301
 msgid "A product category"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:286
+#: includes/Admin/RuleForm.php:302
 msgid "A product or variation"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:325
+#: includes/Admin/RuleForm.php:341
 msgid "Search for a product or variation…"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:357
+#: includes/Admin/RuleForm.php:373
 msgid "Product search needs the \"edit products\" capability, so this is a plain list instead."
 msgstr ""
 
-#: includes/Admin/RuleForm.php:366
+#: includes/Admin/RuleForm.php:382
 msgid "Commission"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:373
+#: includes/Admin/RuleForm.php:389
 msgid "% of the line total"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:374
+#: includes/Admin/RuleForm.php:390
 msgid "flat, per order line"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:376
+#: includes/Admin/RuleForm.php:392
 msgid "Applied per matching order line, to the same line totals Fluent Affiliate commissions — so your tax and shipping settings are respected."
 msgstr ""
 
-#: includes/Admin/RuleForm.php:384
+#: includes/Admin/RuleForm.php:400
 msgid "Active period"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:388
+#: includes/Admin/RuleForm.php:404
 msgid "From"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:393
+#: includes/Admin/RuleForm.php:409
 msgid "Until"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:398
+#: includes/Admin/RuleForm.php:414
 msgid "First 12 months"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:400
+#: includes/Admin/RuleForm.php:416
 msgid "Leave both empty for a rule that never expires."
 msgstr ""
 
-#: includes/Admin/RuleForm.php:408
+#: includes/Admin/RuleForm.php:424
 msgid "Internal note"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:414
+#: includes/Admin/RuleForm.php:430
 msgid "Why this rule exists. Nobody remembers in a year."
 msgstr ""
 
-#: includes/Admin/RuleForm.php:422
+#: includes/Admin/RuleForm.php:438
 #: includes/Admin/RulesPage.php:179
 msgid "Status"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:425
+#: includes/Admin/RuleForm.php:441
 #: includes/Admin/RulesPage.php:116
 msgid "Active"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:426
+#: includes/Admin/RuleForm.php:442
 #: includes/Admin/RulesPage.php:117
 #: includes/Admin/RulesPage.php:230
 msgid "Inactive"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:439
+#: includes/Admin/RuleForm.php:455
 msgid "Result:"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:452
+#: includes/Admin/RuleForm.php:468
 msgid "Save rule"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:453
+#: includes/Admin/RuleForm.php:469
 msgid "Cancel"
 msgstr ""
 
 #. translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Coffee")
-#: includes/Admin/RuleForm.php:462
+#: includes/Admin/RuleForm.php:478
 #, php-format
 msgid "%1$s earns %2$s on %3$s."
 msgstr ""
 
 #. translators: %s: the start date the rule takes effect
-#: includes/Admin/RuleForm.php:464
+#: includes/Admin/RuleForm.php:480
 #, php-format
 msgid " From %s."
 msgstr ""
 
 #. translators: %s: the date the rule stops applying
-#: includes/Admin/RuleForm.php:466
+#: includes/Admin/RuleForm.php:482
 #, php-format
 msgid " Until %s."
 msgstr ""
 
 #. translators: %1$s: start date, %2$s: end date
-#: includes/Admin/RuleForm.php:468
+#: includes/Admin/RuleForm.php:484
 #, php-format
 msgid " From %1$s to %2$s."
 msgstr ""

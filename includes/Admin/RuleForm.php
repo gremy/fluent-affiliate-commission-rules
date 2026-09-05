@@ -33,6 +33,22 @@ final class RuleForm {
     return is_scalar( $value ) ? (string) $value : '';
   }
 
+  /**
+   * The rule to redisplay after a validation error, with the id the browser
+   * actually submitted — not the uuid Store::validate() mints for a new rule.
+   * Without this, resubmitting a corrected new rule posts back that minted id,
+   * Store::get() can't find it, and handle_save() bounces to the "missing"
+   * notice instead of ever creating the rule.
+   *
+   * @param array<string,mixed> $submitted The $input passed into Store::validate().
+   * @param array<string,mixed> $validated The $rule Store::validate() returned.
+   * @return array<string,mixed>
+   */
+  public static function stash_input( array $submitted, array $validated ): array {
+    $validated['id'] = (string) ( $submitted['id'] ?? '' );
+    return $validated;
+  }
+
   // ------------------------------------------------------------ handlers ---
 
   public function handle_save(): void {
@@ -85,7 +101,7 @@ final class RuleForm {
     [ $rule, $errors ] = Store::validate( $input );
 
     if ( $errors ) {
-      set_transient( self::error_key(), [ 'errors' => $errors, 'input' => $rule ], 60 );
+      set_transient( self::error_key(), [ 'errors' => $errors, 'input' => self::stash_input( $input, $rule ) ], 60 );
       wp_safe_redirect(
         Menu::page_url(
           [

@@ -698,6 +698,24 @@ try {
   [ $facr_ca_new ] = Store::validate( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage' ] );
   facr_it( 'validate stamps created_at when none is passed in (a new rule)', $facr_ca_new['created_at'] !== '' );
 
+  // Task: a new rule that fails validation must be resubmittable. Store::validate()
+  // mints a uuid for a new rule's id even when it fails validation (so the id is
+  // ready to save on the next successful attempt) — but stashing that minted id
+  // for redisplay would make the corrected resubmit look like an edit of a rule
+  // Store::get() can never find, and handle_save() would bounce to "missing".
+  $facr_bad_new_input   = [ 'id' => '', 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 'not-a-number', 'rate_type' => 'percentage' ];
+  [ $facr_bad_new_rule, $facr_bad_new_errors ] = Store::validate( $facr_bad_new_input );
+  facr_it( 'a bad new rule fails validation', ! empty( $facr_bad_new_errors ) );
+  facr_it( 'validate mints a uuid for a new rule even on failure', $facr_bad_new_rule['id'] !== '' );
+  $facr_bad_new_stash = \FACommissionRules\Admin\RuleForm::stash_input( $facr_bad_new_input, $facr_bad_new_rule );
+  facr_it( 'stash_input clears the minted id for a new rule', $facr_bad_new_stash['id'] === '' );
+
+  $facr_bad_edit_input = [ 'id' => 'facr_existing_id', 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 'not-a-number', 'rate_type' => 'percentage' ];
+  [ $facr_bad_edit_rule, $facr_bad_edit_errors ] = Store::validate( $facr_bad_edit_input );
+  facr_it( 'a bad edit fails validation', ! empty( $facr_bad_edit_errors ) );
+  $facr_bad_edit_stash = \FACommissionRules\Admin\RuleForm::stash_input( $facr_bad_edit_input, $facr_bad_edit_rule );
+  facr_it( 'stash_input keeps the original id for an edit', $facr_bad_edit_stash['id'] === 'facr_existing_id' );
+
   if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
     $facr_features = \Automattic\WooCommerce\Utilities\FeaturesUtil::get_compatible_features_for_plugin( plugin_basename( FACR_FILE ) );
     facr_it(
