@@ -4,13 +4,15 @@ Tags: affiliate, commission, fluent affiliate, woocommerce, referrals
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Per-affiliate and per-group commission rules for Fluent Affiliate, targeted at a product, a category, or everything, with an optional date window.
 
 == Description ==
+
+Source: [github.com/gremy/fluent-affiliate-commission-rules](https://github.com/gremy/fluent-affiliate-commission-rules) is a one-way mirror. The private monorepo this plugin is developed in is the source of truth.
 
 Fluent Affiliate gives each affiliate one rate, each group one rate, and the whole site one product/category rate table. This add-on adds the dimension it is missing: a rate that depends on **who** the affiliate is *and* **what** they sold.
 
@@ -31,6 +33,8 @@ Fluent's own site-wide product/category rates are not copied. They are read live
 Every referral it touches carries an audit stamp, plus a short note appended to the description so the reason shows up in Fluent's CSV export.
 
 The affiliate profile card and the affiliate portal card both show only the rules currently in force, one row per target, naming the Source (Individual, Group or Everyone) of the rule that actually won.
+
+The rules screen is a Vue 3 + Element Plus app mounted inside Fluent Affiliate's own admin chrome, styled by Fluent's own stylesheets so it looks and behaves like one of their screens, including dark mode. It lives on a page of its own because Fluent Affiliate's compiled admin app has no module contract for third-party screens (FluentCRM's `fluentcrm_global_routes` and import-map contract is the model). Data moves over a small REST API (`fa-commission-rules/v1`) gated on Fluent's manage_all_data permission.
 
 = Hooks it uses =
 
@@ -54,9 +58,9 @@ Uninstalling the plugin deletes its single stored option (`_fa_commission_rules`
 
 Yes. A group rule applies to every member of the group, whatever that member's own rate type is. This differs on purpose from Fluent's own group rate, which only takes effect when the affiliate's rate_type is literally "group". Precedence still applies: a rule scoped to that one affiliate beats the group's.
 
-= Product search on the rule form shows nothing. =
+= Product search in the rule editor shows nothing. =
 
-WooCommerce's product search endpoint requires the edit_products capability. Without it the form falls back to a plain list of products.
+The editor searches through this plugin's own endpoint (`GET /fa-commission-rules/v1/products?search=`), which needs only Fluent Affiliate's manage_all_data permission and WooCommerce active. Type at least two characters; products and variations are matched by title, SKU and content, the same way WooCommerce's own admin search works.
 
 = I edited a rule and got told it can't be saved. =
 
@@ -87,6 +91,11 @@ One detail worth knowing when reading old audit stamps: the synthetic `fluent:<n
 No. Pro is needed for affiliate groups, lifetime commissions and the WooCommerce integration. Without Pro, the group scope is hidden and everything else works.
 
 == Changelog ==
+
+= 1.1.0 =
+* The Commission Rules screen is now a Vue 3 + Element Plus app inside Fluent Affiliate's own admin chrome, with a rule editor drawer, remote product search and dark mode.
+* New REST API under fa-commission-rules/v1 (rules, options, product search).
+* Removed the server-rendered rules screen and its admin-post handlers.
 
 = 1.0.0 =
 * Initial release.

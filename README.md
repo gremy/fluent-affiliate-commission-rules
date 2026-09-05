@@ -3,6 +3,10 @@
 Per-affiliate and per-group commission rules for [Fluent Affiliate](https://fluentaffiliate.com),
 targeted at a product, a product category, or everything, with an optional date window.
 
+**Source:** [github.com/gremy/fluent-affiliate-commission-rules](https://github.com/gremy/fluent-affiliate-commission-rules)
+is a one-way mirror. This repository (a private monorepo) is the source of truth;
+changes land here first and are mirrored out by `bin/mirror-fa-commission-rules.sh`.
+
 > Independent third-party add-on. Not affiliated with, or endorsed by, WPManageNinja.
 
 Fluent Affiliate can give each affiliate one rate, each group one rate, and the
@@ -60,6 +64,41 @@ carries a shadow badge reading "Overridden for some products by …" rather than
 implying the whole group rate is dead — the underlying group membership isn't
 knowable from the rules alone.
 
+## Architecture: why a separate page
+
+The Commission Rules screen is a Vue 3 + Element Plus app of its own, mounted
+inside Fluent Affiliate's admin chrome rather than a route inside their app.
+
+Fluent Affiliate's admin is a compiled single-page app with a fixed route table:
+there is no catch-all route, no JavaScript hook, and no global (`window.Vue`,
+`window.ElementPlus` are absent), so a third party cannot register a screen in
+it the way a FluentCRM module can. FluentCRM ships a module contract for this
+— `FLUENTCRM_MODULE_API`, the `fluentcrm_global_routes` filter and an import
+map that exposes `@fluentcrm/vue` and Element Plus to add-ons — and that
+contract is exactly what this plugin would ask the Fluent team for. Until it
+exists, the plugin does the next best thing:
+
+- **Their chrome, printed by them.** The page callback calls
+  `AdminMenuHandler::render()`, so Fluent's real navbar (with a "Commission
+  rules" tab added through `fluent_affiliate/top_menu_items`) and their
+  `#fluent-framework-app` mount point are on the page. Their two stylesheets are
+  enqueued through their own `Vite::enqueueStyle()` helper, so RTL and dark mode
+  (`fla_color_mode`) behave as on every other Fluent screen.
+- **Our app, their look.** A plain-script Vue 3 app (`assets/admin/app.js`, no
+  build step) mounts into that div. Vue is pinned to Fluent's own version
+  (3.5.17) and Element Plus to 2.9.11; both are vendored under `assets/vendor/`
+  (versions recorded in `assets/vendor/VERSIONS.md`).
+  No component CSS is shipped at all: Fluent's two admin stylesheets
+  (`app.min.css`, `admin.css`) style every Element Plus component the app
+  renders; a smoke test fails the build if that ever stops being true.
+- **A small REST API** (`fa-commission-rules/v1`: rules, options, product
+  search) gated on Fluent's `manage_all_data` permission and authenticated with
+  the standard `wp_rest` nonce, like their own SPA. Every rule label is built
+  server-side, so the browser holds no naming or money-formatting logic.
+
+If Fluent Affiliate ever grows a module contract, the app is one `createApp()`
+away from becoming a route in theirs.
+
 ## Requirements
 
 - WordPress 6.6+
@@ -81,6 +120,7 @@ knowable from the rules alone.
 | `fluent_affiliate/affiliate_widgets` | 10 | The profile card. |
 | `fluent_affiliate/portal_notice_html` | 10 | The portal rate card. |
 | `fluent_affiliate/after_delete_affiliate` / `…_affiliate_group` | 10 | Drops the rules of a deleted affiliate or group. |
+| `rest_api_init` | — | Registers the `fa-commission-rules/v1` REST routes (`Controller::routes()`). |
 
 It deliberately does **not** hook `fluent_affiliate/commission`: WooCommerce never
 fires it, and hooking it alongside `referral_data` would double-apply on the
@@ -123,7 +163,12 @@ Uninstalling the plugin deletes that one row and nothing else.
 
 ```bash
 php tests/test-resolver.php                     # the engine, no WordPress needed
+php tests/test-assets.php                       # vendored Vue / Element Plus pins
+php tests/test-css-coverage.php                 # every rendered component is styled
+node --test tests/helpers.test.mjs              # pure JS helpers
 wp eval-file tests/test-integration.php         # end to end against Fluent
+wp eval-file tests/test-rest.php                # the REST API
+wp eval-file tests/test-admin.php               # the admin page shell
 wp eval-file tests/test-neutrality.php          # brand and text-domain guard
 ```
 
@@ -138,10 +183,8 @@ affiliate with a custom percentage never sees their group's rate. Rules are abou
 unusable for exactly the partner you set a custom rate for. Precedence still
 applies: a rule scoped to that one affiliate beats the group's.
 
-**Product search on the rule form shows nothing.**
-WooCommerce's product search endpoint requires the `edit_products` capability. If
-the account managing commission rules does not have it, the form falls back to a
-plain list of products instead of the search box.
+**Product search in the rule editor shows nothing.**
+The editor searches through this plugin's own endpoint (`GET /fa-commission-rules/v1/products?search=`), which needs only Fluent Affiliate's `manage_all_data` permission (via the REST route's `permission_callback`) and WooCommerce active. Type at least two characters; products and variations are matched by title, SKU and content, the same way WooCommerce's own admin search works.
 
 **I edited a rule and got told it can't be saved.**
 Two rules are refused outright rather than silently discarded: a rule whose id

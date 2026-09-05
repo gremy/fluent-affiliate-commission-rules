@@ -3,13 +3,13 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Commission Rules for Fluent Affiliate 1.0.0\n"
-"Report-Msgid-Bugs-To: https://github.com/webbership/fluent-affiliate-commission-rules/issues\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/fluent-affiliate-commission-rules\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-05T05:01:51+00:00\n"
+"POT-Creation-Date: 2026-09-05T18:28:40+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: fa-commission-rules\n"
@@ -34,456 +34,447 @@ msgstr ""
 msgid "Webbership"
 msgstr ""
 
-#: includes/Admin/Menu.php:33
-#: includes/Admin/Menu.php:34
+#: includes/Admin/Menu.php:48
+#: includes/Admin/Menu.php:49
 msgid "Commission Rules"
 msgstr ""
 
-#: includes/Admin/Menu.php:51
-#: includes/Admin/RulesPage.php:80
-#: includes/Admin/Widgets.php:103
+#: includes/Admin/Menu.php:66
+msgid "Commissions"
+msgstr ""
+
+#: includes/Admin/Menu.php:78
+msgid "You do not have permission to manage commission rules."
+msgstr ""
+
+#: includes/Admin/Strings.php:21
+#: includes/Admin/Widgets.php:104
 msgid "Commission rules"
 msgstr ""
 
-#. translators: 1: who the rule applies to, 2: what the rule does
-#: includes/Admin/RuleForm.php:129
-#: includes/Admin/RuleForm.php:460
+#: includes/Admin/Strings.php:22
+msgid "Add rule"
+msgstr ""
+
+#: includes/Admin/Strings.php:23
+msgid "Add the first rule"
+msgstr ""
+
+#. translators: %s: the commission rate every affiliate currently inherits
+#: includes/Admin/Strings.php:25
 #, php-format
-msgid "%1$s — %2$s"
+msgid "No commission rules yet. Every affiliate earns the inherited default rate of %s."
+msgstr ""
+
+#: includes/Admin/Strings.php:26
+msgid "No rule matches these filters."
+msgstr ""
+
+#: includes/Admin/Strings.php:27
+msgid "All audiences"
+msgstr ""
+
+#: includes/Admin/Strings.php:28
+msgid "Affiliate"
+msgstr ""
+
+#: includes/Admin/Strings.php:29
+#: includes/Admin/Widgets.php:59
+msgid "Group"
+msgstr ""
+
+#: includes/Admin/Strings.php:30
+#: includes/Admin/Strings.php:91
+#: includes/Admin/Strings.php:127
+#: includes/Admin/Widgets.php:61
+#: includes/Labels.php:48
+msgid "Everyone"
+msgstr ""
+
+#: includes/Admin/Strings.php:31
+msgid "Any target"
+msgstr ""
+
+#: includes/Admin/Strings.php:32
+msgid "A product"
+msgstr ""
+
+#: includes/Admin/Strings.php:33
+msgid "A category"
+msgstr ""
+
+#: includes/Admin/Strings.php:34
+#: includes/Admin/Strings.php:96
+#: includes/Labels.php:73
+msgid "All products"
+msgstr ""
+
+#: includes/Admin/Strings.php:35
+msgid "Any status"
+msgstr ""
+
+#: includes/Admin/Strings.php:36
+#: includes/Admin/Strings.php:112
+msgid "Active"
+msgstr ""
+
+#: includes/Admin/Strings.php:37
+#: includes/Admin/Strings.php:47
+#: includes/Admin/Strings.php:113
+msgid "Inactive"
+msgstr ""
+
+#: includes/Admin/Strings.php:38
+msgid "Search notes, products, people…"
+msgstr ""
+
+#: includes/Admin/Strings.php:39
+msgid "Who"
+msgstr ""
+
+#: includes/Admin/Strings.php:40
+#: includes/Admin/Widgets.php:96
+msgid "For what"
+msgstr ""
+
+#: includes/Admin/Strings.php:41
+#: includes/Admin/Widgets.php:97
+msgid "Rate"
+msgstr ""
+
+#: includes/Admin/Strings.php:42
+#: includes/Admin/Widgets.php:98
+msgid "Window"
+msgstr ""
+
+#: includes/Admin/Strings.php:43
+#: includes/Admin/Strings.php:111
+msgid "Status"
+msgstr ""
+
+#: includes/Admin/Strings.php:44
+msgid "Note"
+msgstr ""
+
+#: includes/Admin/Strings.php:45
+msgid "Actions"
+msgstr ""
+
+#: includes/Admin/Strings.php:46
+msgid "Global (Fluent)"
+msgstr ""
+
+#: includes/Admin/Strings.php:48
+msgid "Effective"
+msgstr ""
+
+#. translators: %s: the narrower rule that takes precedence for some products
+#: includes/Admin/Strings.php:50
+#, php-format
+msgid "Overridden for some products by: %s"
+msgstr ""
+
+#. translators: 1: who the narrower rule applies to, 2: the products it targets
+#: includes/Admin/Strings.php:52
+#, php-format
+msgid "%1$s → %2$s"
+msgstr ""
+
+#: includes/Admin/Strings.php:53
+msgid "Conflict: two rules are equally specific"
+msgstr ""
+
+#: includes/Admin/Strings.php:54
+#: includes/Rest/Controller.php:191
+#: includes/Rest/Controller.php:251
+msgid "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings."
+msgstr ""
+
+#: includes/Admin/Strings.php:55
+msgid "Read-only"
+msgstr ""
+
+#: includes/Admin/Strings.php:56
+msgid "Edit"
+msgstr ""
+
+#: includes/Admin/Strings.php:57
+msgid "Delete"
+msgstr ""
+
+#: includes/Admin/Strings.php:58
+msgid "Activate"
+msgstr ""
+
+#: includes/Admin/Strings.php:59
+msgid "Deactivate"
+msgstr ""
+
+#. translators: %d: number of selected rules
+#: includes/Admin/Strings.php:61
+#, php-format
+msgid "%d selected"
+msgstr ""
+
+#: includes/Admin/Strings.php:62
+msgid "Please confirm"
+msgstr ""
+
+#: includes/Admin/Strings.php:63
+msgid "Yes, continue"
+msgstr ""
+
+#: includes/Admin/Strings.php:64
+#: includes/Admin/Strings.php:116
+msgid "Cancel"
+msgstr ""
+
+#. translators: %s: the store's inherited default commission rate
+#: includes/Admin/Strings.php:66
+#, php-format
+msgid "Delete this rule? For those products the affiliate reverts to the next matching rule, or to the default rate of %s."
+msgstr ""
+
+#. translators: %s: the store's inherited default commission rate
+#: includes/Admin/Strings.php:68
+#, php-format
+msgid "Delete the selected rules? For those products each affiliate reverts to the next matching rule, or to the inherited default rate of %s."
+msgstr ""
+
+#. translators: %s: the store's inherited default commission rate
+#: includes/Admin/Strings.php:70
+#, php-format
+msgid "Deactivate the selected rules? For those products each affiliate reverts to the next matching rule, or to the inherited default rate of %s."
+msgstr ""
+
+#: includes/Admin/Strings.php:71
+msgid "Rule deleted."
 msgstr ""
 
 #. translators: %d: number of rules changed
-#: includes/Admin/RuleForm.php:174
+#: includes/Admin/Strings.php:74
+#: includes/Admin/Strings.php:76
 #, php-format
 msgid "%d rule updated."
 msgid_plural "%d rules updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Admin/RuleForm.php:186
-#: includes/Admin/RuleForm.php:199
-#: includes/Admin/RulesPage.php:21
-msgid "You do not have permission to manage commission rules."
+#. translators: %s: what the saved rule does, in plain words
+#: includes/Admin/Strings.php:78
+#, php-format
+msgid "Rule saved: %s"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:243
-msgid "Edit commission rule"
+#: includes/Admin/Strings.php:79
+msgid "Rule saved, with a conflict"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:243
+#: includes/Admin/Strings.php:80
+msgid "Another active rule is exactly as specific, so the newer of the two wins. Look for the Conflict flag in the list."
+msgstr ""
+
+#: includes/Admin/Strings.php:81
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#: includes/Admin/Strings.php:84
 msgid "Add commission rule"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:255
+#: includes/Admin/Strings.php:85
+msgid "Edit commission rule"
+msgstr ""
+
+#: includes/Admin/Strings.php:86
 msgid "Applies to"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:257
-#: includes/Admin/RulesPage.php:98
-#: includes/Admin/RulesPage.php:307
-#: includes/Admin/Widgets.php:60
-msgid "Everyone"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:259
-msgid "An affiliate group"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:261
-msgid "One affiliate"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:270
-msgid "— choose —"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:297
+#: includes/Admin/Strings.php:87
 msgid "For the products"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:299
-#: includes/Admin/RulesPage.php:108
-#: includes/Admin/RulesPage.php:314
-msgid "All products"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:301
-msgid "A product category"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:302
-msgid "A product or variation"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:341
-msgid "Search for a product or variation…"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:373
-msgid "Product search needs the \"edit products\" capability, so this is a plain list instead."
-msgstr ""
-
-#: includes/Admin/RuleForm.php:382
+#: includes/Admin/Strings.php:88
 msgid "Commission"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:389
-msgid "% of the line total"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:390
-msgid "flat, per order line"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:392
-msgid "Applied per matching order line, to the same line totals Fluent Affiliate commissions — so your tax and shipping settings are respected."
-msgstr ""
-
-#: includes/Admin/RuleForm.php:400
+#: includes/Admin/Strings.php:89
 msgid "Active period"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:404
-msgid "From"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:409
-msgid "Until"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:414
-msgid "First 12 months"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:416
-msgid "Leave both empty for a rule that never expires."
-msgstr ""
-
-#: includes/Admin/RuleForm.php:424
+#: includes/Admin/Strings.php:90
 msgid "Internal note"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:430
+#: includes/Admin/Strings.php:92
+msgid "An affiliate group"
+msgstr ""
+
+#: includes/Admin/Strings.php:93
+msgid "One affiliate"
+msgstr ""
+
+#: includes/Admin/Strings.php:94
+msgid "Choose a group"
+msgstr ""
+
+#: includes/Admin/Strings.php:95
+msgid "Choose an affiliate"
+msgstr ""
+
+#: includes/Admin/Strings.php:97
+msgid "A product category"
+msgstr ""
+
+#: includes/Admin/Strings.php:98
+msgid "A product or variation"
+msgstr ""
+
+#: includes/Admin/Strings.php:99
+msgid "Choose categories"
+msgstr ""
+
+#: includes/Admin/Strings.php:100
+msgid "Search for a product or variation…"
+msgstr ""
+
+#: includes/Admin/Strings.php:101
+msgid "Type at least two characters"
+msgstr ""
+
+#: includes/Admin/Strings.php:102
+msgid "No products found"
+msgstr ""
+
+#: includes/Admin/Strings.php:103
+msgid "% of the line total"
+msgstr ""
+
+#: includes/Admin/Strings.php:104
+msgid "flat, per order line"
+msgstr ""
+
+#: includes/Admin/Strings.php:105
+msgid "Applied per matching order line, to the same line totals Fluent Affiliate commissions — so your tax and shipping settings are respected."
+msgstr ""
+
+#: includes/Admin/Strings.php:106
+msgid "From"
+msgstr ""
+
+#: includes/Admin/Strings.php:107
+msgid "Until"
+msgstr ""
+
+#: includes/Admin/Strings.php:108
+msgid "First 12 months"
+msgstr ""
+
+#: includes/Admin/Strings.php:109
+msgid "Leave both empty for a rule that never expires."
+msgstr ""
+
+#: includes/Admin/Strings.php:110
 msgid "Why this rule exists. Nobody remembers in a year."
 msgstr ""
 
-#: includes/Admin/RuleForm.php:438
-#: includes/Admin/RulesPage.php:179
-msgid "Status"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:441
-#: includes/Admin/RulesPage.php:116
-msgid "Active"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:442
-#: includes/Admin/RulesPage.php:117
-#: includes/Admin/RulesPage.php:230
-msgid "Inactive"
-msgstr ""
-
-#: includes/Admin/RuleForm.php:455
+#: includes/Admin/Strings.php:114
 msgid "Result:"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:468
+#: includes/Admin/Strings.php:115
 msgid "Save rule"
 msgstr ""
 
-#: includes/Admin/RuleForm.php:469
-msgid "Cancel"
-msgstr ""
-
 #. translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Coffee")
-#: includes/Admin/RuleForm.php:478
+#: includes/Admin/Strings.php:120
 #, php-format
 msgid "%1$s earns %2$s on %3$s."
 msgstr ""
 
 #. translators: %s: the start date the rule takes effect
-#: includes/Admin/RuleForm.php:480
+#: includes/Admin/Strings.php:122
 #, php-format
 msgid " From %s."
 msgstr ""
 
 #. translators: %s: the date the rule stops applying
-#: includes/Admin/RuleForm.php:482
+#: includes/Admin/Strings.php:124
 #, php-format
 msgid " Until %s."
 msgstr ""
 
 #. translators: %1$s: start date, %2$s: end date
-#: includes/Admin/RuleForm.php:484
+#: includes/Admin/Strings.php:126
 #, php-format
 msgid " From %1$s to %2$s."
 msgstr ""
 
-#: includes/Admin/RulesPage.php:84
-msgid "Add rule"
+#: includes/Admin/Strings.php:128
+msgid "This group"
 msgstr ""
 
-#: includes/Admin/RulesPage.php:94
-msgid "All audiences"
+#: includes/Admin/Strings.php:129
+msgid "This affiliate"
 msgstr ""
 
-#: includes/Admin/RulesPage.php:96
-msgid "Affiliate"
+#: includes/Admin/Strings.php:130
+msgid "all products"
 msgstr ""
 
-#: includes/Admin/RulesPage.php:97
-#: includes/Admin/Widgets.php:58
-msgid "Group"
+#: includes/Admin/Strings.php:131
+msgid "the chosen categories"
 msgstr ""
 
-#: includes/Admin/RulesPage.php:104
-msgid "Any target"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:106
-msgid "A product"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:107
-msgid "A category"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:114
-msgid "Any status"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:125
-msgid "Search notes, products, people…"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:126
-msgid "Search commission rules"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:128
-msgid "Filter"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:135
-msgid "No rule matches these filters."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:144
-msgid "No commission rules yet."
-msgstr ""
-
-#. translators: %s: the commission rate every affiliate currently inherits
-#: includes/Admin/RulesPage.php:148
-#, php-format
-msgid "Every affiliate earns the inherited default rate of %s."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:153
-msgid "Add the first rule"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:165
-msgid "Bulk actions"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:166
-msgid "Activate"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:167
-msgid "Deactivate"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:168
-#: includes/Admin/RulesPage.php:217
-msgid "Delete"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:170
-msgid "Apply"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:175
-msgid "Who"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:176
-#: includes/Admin/Widgets.php:95
-msgid "For what"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:177
-#: includes/Admin/Widgets.php:96
-msgid "Rate"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:178
-#: includes/Admin/Widgets.php:97
-msgid "Window"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:180
-msgid "Note"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:197
-msgid "Edit"
-msgstr ""
-
-#. translators: %s: the store's inherited default commission rate
-#: includes/Admin/RulesPage.php:211
-#, php-format
-msgid "Delete this rule? For those products the affiliate reverts to the next matching rule, or to the default rate of %s."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:228
-msgid "Global (Fluent)"
-msgstr ""
-
-#. translators: %s: the narrower rule that takes precedence for some products
-#: includes/Admin/RulesPage.php:241
-#, php-format
-msgid "Overridden for some products by: %s"
-msgstr ""
-
-#. translators: 1: who the narrower rule applies to, 2: the products it targets
-#: includes/Admin/RulesPage.php:245
-#, php-format
-msgid "%1$s → %2$s"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:254
-msgid "Effective"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:260
-msgid "Conflict: two rules are equally specific"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:274
-msgid "Delete the selected rules? For those products each affiliate reverts to the next matching rule, or to the inherited default rate."
-msgstr ""
-
-#. translators: %s: affiliate name and id
-#: includes/Admin/RulesPage.php:297
-#, php-format
-msgid "Affiliate: %s"
-msgstr ""
-
-#. translators: %s: affiliate group name
-#: includes/Admin/RulesPage.php:303
-#, php-format
-msgid "Group: %s"
-msgstr ""
-
-#. translators: %s: comma-separated product category names
-#: includes/Admin/RulesPage.php:334
-#, php-format
-msgid "Category: %s"
-msgstr ""
-
-#. translators: %s: comma-separated product or variation names
-#: includes/Admin/RulesPage.php:339
-#, php-format
-msgid "Product: %s"
+#: includes/Admin/Strings.php:132
+msgid "the chosen products"
 msgstr ""
 
 #. translators: %s: a flat commission amount, per order line, already in store currency
-#: includes/Admin/RulesPage.php:351
+#: includes/Admin/Strings.php:134
+#: includes/Labels.php:101
 #, php-format
 msgid "%s flat"
 msgstr ""
 
-#: includes/Admin/RulesPage.php:367
-msgid "Always"
-msgstr ""
-
-#. translators: 1: start date, 2: end date
-#: includes/Admin/RulesPage.php:372
-#, php-format
-msgid "%1$s to %2$s"
-msgstr ""
-
-#. translators: %s: start date
-#: includes/Admin/RulesPage.php:380
-#, php-format
-msgid "From %s"
-msgstr ""
-
-#. translators: %s: end date
-#: includes/Admin/RulesPage.php:385
-#, php-format
-msgid "Until %s"
-msgstr ""
-
-#. translators: 1: rate, 2: what the rate applies to, 3: the date window
-#: includes/Admin/RulesPage.php:394
-#, php-format
-msgid "%1$s on %2$s (%3$s)"
-msgstr ""
-
-#: includes/Admin/RulesPage.php:417
-msgid "Rule saved."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:418
-msgid "Rule saved, but another active rule is exactly as specific, so the newer of the two wins. Look for the Conflict flag below."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:419
-msgid "Rule deleted."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:420
-msgid "Bulk action applied."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:421
-msgid "That rule no longer exists."
-msgstr ""
-
-#: includes/Admin/RulesPage.php:422
-msgid "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings."
-msgstr ""
-
-#: includes/Admin/Widgets.php:56
+#: includes/Admin/Widgets.php:57
 msgid "Individual"
 msgstr ""
 
-#: includes/Admin/Widgets.php:98
+#: includes/Admin/Widgets.php:99
 msgid "Source"
 msgstr ""
 
-#: includes/Admin/Widgets.php:100
+#: includes/Admin/Widgets.php:101
 msgid "No commission rules apply to this affiliate. They earn the inherited rate."
 msgstr ""
 
-#: includes/Admin/Widgets.php:107
+#: includes/Admin/Widgets.php:108
 msgid "Add rule for this affiliate"
 msgstr ""
 
-#: includes/Admin/Widgets.php:149
+#: includes/Admin/Widgets.php:150
 msgid "Your commission"
 msgstr ""
 
-#: includes/Admin/Widgets.php:157
+#: includes/Admin/Widgets.php:158
 msgid "on the net value of your orders"
 msgstr ""
 
 #. translators: %s: the products or categories the rate covers
-#: includes/Admin/Widgets.php:160
+#: includes/Admin/Widgets.php:161
 #, php-format
 msgid "on %s"
 msgstr ""
 
 #. translators: 1: commission rate, 2: what it applies to, 3: the last day it applies
-#: includes/Admin/Widgets.php:167
+#: includes/Admin/Widgets.php:168
 #, php-format
 msgid "You earn %1$s %2$s, until %3$s."
 msgstr ""
 
 #. translators: 1: commission rate, 2: what it applies to
-#: includes/Admin/Widgets.php:176
+#: includes/Admin/Widgets.php:177
 #, php-format
 msgid "You earn %1$s %2$s."
 msgstr ""
@@ -500,10 +491,75 @@ msgstr ""
 msgid "Affiliate #%d"
 msgstr ""
 
+#. translators: %s: affiliate name and id
+#: includes/Labels.php:38
+#, php-format
+msgid "Affiliate: %s"
+msgstr ""
+
+#. translators: %s: affiliate group name
+#: includes/Labels.php:44
+#, php-format
+msgid "Group: %s"
+msgstr ""
+
+#. translators: %s: comma-separated product category names
+#: includes/Labels.php:84
+#, php-format
+msgid "Category: %s"
+msgstr ""
+
+#. translators: %s: comma-separated product or variation names
+#: includes/Labels.php:89
+#, php-format
+msgid "Product: %s"
+msgstr ""
+
+#: includes/Labels.php:117
+msgid "Always"
+msgstr ""
+
+#. translators: 1: start date, 2: end date
+#: includes/Labels.php:122
+#, php-format
+msgid "%1$s to %2$s"
+msgstr ""
+
+#. translators: %s: start date
+#: includes/Labels.php:130
+#, php-format
+msgid "From %s"
+msgstr ""
+
+#. translators: %s: end date
+#: includes/Labels.php:135
+#, php-format
+msgid "Until %s"
+msgstr ""
+
+#. translators: 1: rate, 2: what the rate applies to, 3: the date window
+#: includes/Labels.php:144
+#, php-format
+msgid "%1$s on %2$s (%3$s)"
+msgstr ""
+
 #. translators: %s: minimum Fluent Affiliate version
-#: includes/Plugin.php:50
+#: includes/Plugin.php:52
 #, php-format
 msgid "Commission Rules for Fluent Affiliate needs Fluent Affiliate %s or newer to be installed and active."
+msgstr ""
+
+#: includes/Rest/Controller.php:119
+msgid "Type at least two characters to search."
+msgstr ""
+
+#: includes/Rest/Controller.php:200
+#: includes/Rest/Controller.php:256
+msgid "That rule no longer exists."
+msgstr ""
+
+#: includes/Rest/Controller.php:270
+msgid "Unknown bulk action."
 msgstr ""
 
 #: includes/Store.php:149
