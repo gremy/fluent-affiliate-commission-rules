@@ -182,4 +182,35 @@ final class Fluent {
     }
     return number_format_i18n( $amount, 2 );
   }
+
+  /**
+   * Fluent Affiliate's own admin chrome: the navbar (with our tab, added via
+   * fluent_affiliate/top_menu_items) and the empty #fluent-framework-app div
+   * our app mounts into. AdminMenuHandler::render() is public and its
+   * constructor takes no arguments (verified against 1.6.5); the
+   * admin_enqueue_scripts listener the constructor adds is inert on our page.
+   */
+  public static function render_admin_chrome(): void {
+    $handler = '\FluentAffiliate\App\Hooks\Handlers\AdminMenuHandler';
+    if ( class_exists( $handler ) && method_exists( $handler, 'render' ) ) {
+      ( new $handler() )->render();
+      return;
+    }
+    // Their handler moved: keep the page usable, just without their navbar.
+    echo '<div id="fluent-affiliate-app" class="warp fconnector_app"><div class="fframe_app"><div class="fframe_body"><div id="fluent-framework-app" class="fs_route_wrapper"></div></div></div></div>';
+  }
+
+  /**
+   * Their tree-shaken Element Plus css and their theme, in that order, through
+   * their own helper so RTL is handled. Both are no-ops if the helper is gone,
+   * which leaves the page unstyled rather than broken.
+   */
+  public static function enqueue_admin_styles(): void {
+    $vite = '\FluentAffiliate\App\Vite';
+    if ( ! class_exists( $vite ) || ! method_exists( $vite, 'enqueueStyle' ) ) {
+      return;
+    }
+    $vite::enqueueStyle( 'facr-fa-app', 'admin_app_css', [], (string) FLUENT_AFFILIATE_VERSION );
+    $vite::enqueueStyle( 'facr-fa-admin', 'admin_css', [ 'facr-fa-app' ], (string) FLUENT_AFFILIATE_VERSION );
+  }
 }

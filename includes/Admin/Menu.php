@@ -6,9 +6,12 @@ namespace FACommissionRules\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use FACommissionRules\Fluent;
+use FACommissionRules\Labels;
 
 /**
- * Our own WP admin screen, hung under Fluent's menu and cross-linked from its header.
+ * Our own WP admin screen, hung under Fluent's menu and cross-linked from its
+ * header. The page prints Fluent's real chrome and mounts our Vue app inside
+ * it; everything else happens over REST.
  *
  * @package FACommissionRules
  */
@@ -17,6 +20,18 @@ final class Menu {
     add_action( 'admin_menu', [ $this, 'add_page' ], 20 );
     add_filter( 'fluent_affiliate/top_menu_items', [ $this, 'add_tab' ] );
     add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+    add_filter( 'admin_body_class', [ $this, 'body_class' ] );
+  }
+
+  /**
+   * Fluent scopes part of its admin stylesheet to its own page's body class;
+   * borrow it so inputs, backgrounds and dark mode look identical on our page.
+   */
+  public function body_class( string $classes ): string {
+    $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+    return $screen && strpos( (string) $screen->id, FACR_PAGE ) !== false
+      ? $classes . ' toplevel_page_fluent-affiliate'
+      : $classes;
   }
 
   /** @param array<string,string> $args */
@@ -34,7 +49,7 @@ final class Menu {
       __( 'Commission Rules', 'fa-commission-rules' ),
       'read',
       FACR_PAGE,
-      [ RulesPage::class, 'render' ]
+      [ __CLASS__, 'render_page' ]
     );
   }
 
@@ -54,16 +69,87 @@ final class Menu {
     return $items;
   }
 
+  /**
+   * The page callback. Fluent's navbar and its empty #fluent-framework-app
+   * mount point are all that is printed; facr-app (enqueued below) mounts into it.
+   */
+  public static function render_page(): void {
+    if ( ! Fluent::can_manage() ) {
+      wp_die( esc_html__( 'You do not have permission to manage commission rules.', 'fa-commission-rules' ), '', [ 'response' => 403 ] );
+    }
+    Fluent::render_admin_chrome();
+  }
+
   public function enqueue( string $hook ): void {
     if ( strpos( $hook, FACR_PAGE ) === false ) {
       return;
     }
-    // WooCommerce's own product search control; no bundle of ours. Its AJAX
-    // endpoint is gated on edit_products, so a manager without that capability
-    // gets the plain fallback select and does not need the script at all.
-    if ( Fluent::has_woo() && current_user_can( 'edit_products' ) ) {
-      wp_enqueue_script( 'wc-enhanced-select' );
-      wp_enqueue_style( 'woocommerce_admin_styles' );
-    }
+
+    Fluent::enqueue_admin_styles();
+
+    wp_register_script( 'facr-vue', FACR_URL . 'assets/vendor/vue.global.prod.js', [], '3.5.17', true );
+    wp_register_script( 'facr-element-plus', FACR_URL . 'assets/vendor/element-plus.full.min.js', [ 'facr-vue' ], '2.9.11', true );
+    wp_register_script( 'facr-helpers', FACR_URL . 'assets/admin/helpers.js', [], FACR_VERSION, true );
+    wp_enqueue_script( 'facr-app', FACR_URL . 'assets/admin/app.js', [ 'facr-vue', 'facr-element-plus', 'facr-helpers' ], FACR_VERSION, true );
+
+    // wp_localize_script casts top-level scalars to strings: has_pro/has_woo
+    // arrive as '1'/'0' and the app compares against '1'.
+    $zero = Fluent::money( 0 );
+    wp_localize_script(
+      'facr-app',
+      'facrAdmin',
+      [
+        'rest_url'          => rest_url( 'fa-commission-rules/v1' ),
+        'nonce'             => wp_create_nonce( 'wp_rest' ),
+        'has_pro'           => Fluent::has_pro() ? '1' : '0',
+        'has_woo'           => Fluent::has_woo() ? '1' : '0',
+        'default_rate'      => Labels::default_rate_label(),
+        // "$ 0.00" → "$ %s": the live sentence formats flat amounts the way the store does.
+        'money_template'    => (string) preg_replace( '/0[.,]00/', '%s', $zero, 1 ),
+        'decimal_separator' => strpos( $zero, '0,00' ) !== false ? ',' : '.',
+        'i18n'              => Strings::all(),
+      ]
+    );
+
+    wp_add_inline_script( 'facr-app', self::bootstrap_script(), 'before' );
+  }
+
+  /**
+   * What Fluent's own bundle would do on this page if it were loaded: apply the
+   * stored colour mode, define the navbar's onclick handlers, mark our tab.
+   * Mirrors app.min.js (1.6.5): class "dark" on <html> and #wpbody-content,
+   * localStorage key fla_color_mode.
+   */
+  public static function bootstrap_script(): string {
+    return <<<'JS'
+( function () {
+  'use strict';
+  var body = document.getElementById( 'wpbody-content' );
+  var stored = '';
+  try { stored = window.localStorage.getItem( 'fla_color_mode' ) || ''; } catch ( e ) { stored = ''; }
+  if ( stored === 'dark' ) {
+    document.documentElement.classList.add( 'dark' );
+    if ( body ) { body.classList.add( 'dark' ); }
+  }
+  window.toggleColorMode = function () {
+    var el = document.getElementById( 'wpbody-content' );
+    if ( ! el ) { return; }
+    var isDark = el.classList.contains( 'dark' );
+    el.classList.toggle( 'dark', ! isDark );
+    document.documentElement.classList.toggle( 'dark', ! isDark );
+    try { window.localStorage.setItem( 'fla_color_mode', isDark ? 'light' : 'dark' ); } catch ( e ) {}
+  };
+  window.toggleMobileMenu = function () {
+    var links = document.getElementById( 'fa_mobile_menu_links' );
+    if ( links ) { links.style.setProperty( 'display', links.style.display === 'block' ? 'none' : 'block' ); }
+  };
+  window.toggleMobileSettingsMenu = function () {
+    var settings = document.querySelector( '.fa-navbar__settings' );
+    if ( settings ) { settings.style.setProperty( 'display', settings.style.display === 'flex' ? '' : 'flex' ); }
+  };
+  var tabs = document.querySelectorAll( '.fa-navbar__link-wrapper[data-key="fa_commission_rules"] .fa-navbar__link' );
+  for ( var i = 0; i < tabs.length; i++ ) { tabs[ i ].classList.add( 'fa-navbar__link--active' ); }
+} )();
+JS;
   }
 }
