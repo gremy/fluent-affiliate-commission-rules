@@ -656,6 +656,31 @@ try {
   $facr_described = \FACommissionRules\Admin\RulesPage::describe( $facr_lbl_of( [ 'ends_at' => '2026-09-30' ] ) );
   facr_it( 'describe composes rate, target and window', strpos( $facr_described, '12.5%' ) !== false && strpos( $facr_described, __( 'All products', 'fa-commission-rules' ) ) !== false );
 
+  // ---------------------------------------------------- missing/readonly ---
+  // Task 7 fix round 1: an edit link or resubmit against an id the store no
+  // longer has must never fall through to "create a new rule" behaviour, and
+  // a submit against a Fluent-owned id must say so rather than "Rule saved."
+  facr_it( 'Store::get() returns null for an id that does not exist', Store::get( 'facr_does_not_exist' ) === null );
+
+  $facr_notice_reflection = new ReflectionMethod( \FACommissionRules\Admin\RulesPage::class, 'notice' );
+  $facr_notice_reflection->setAccessible( true );
+  $facr_render_notice     = static function ( string $notice ) use ( $facr_notice_reflection ): string {
+    $_GET['facr_notice'] = $notice;
+    ob_start();
+    $facr_notice_reflection->invoke( null );
+    unset( $_GET['facr_notice'] );
+    return (string) ob_get_clean();
+  };
+
+  facr_it(
+    'the missing-rule notice states the rule is gone',
+    strpos( $facr_render_notice( 'missing' ), esc_html__( 'That rule no longer exists.', 'fa-commission-rules' ) ) !== false
+  );
+  facr_it(
+    "the readonly notice points at Fluent Affiliate's own settings",
+    strpos( $facr_render_notice( 'readonly' ), esc_html__( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ) ) !== false
+  );
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );

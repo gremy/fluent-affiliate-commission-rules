@@ -27,6 +27,23 @@ final class RuleForm {
   public function handle_save(): void {
     self::guard( 'facr_save_rule' );
 
+    $id = isset( $_POST['facr_id'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_id'] ) ) : '';
+
+    if ( strncmp( $id, 'fluent:', 7 ) === 0 ) {
+      // Belt and suspenders: Store::save() already no-ops on this prefix, but
+      // without this the user sees "Rule saved." for a save that did nothing.
+      wp_safe_redirect( Menu::page_url( [ 'facr_notice' => 'readonly' ] ) );
+      exit;
+    }
+
+    if ( $id !== '' && ! Store::get( $id ) ) {
+      // The rule was deleted (by this admin, elsewhere, or by another admin)
+      // between the edit screen loading and this submit. Recreating it under
+      // the id the browser still has would silently resurrect stale data.
+      wp_safe_redirect( Menu::page_url( [ 'facr_notice' => 'missing' ] ) );
+      exit;
+    }
+
     $target_type = isset( $_POST['facr_target_type'] ) ? sanitize_key( wp_unslash( $_POST['facr_target_type'] ) ) : 'all';
 
     // The category picker and the product picker are both on the page, and a
@@ -37,7 +54,7 @@ final class RuleForm {
     $target_ids = isset( $_POST[ $ids_field ] ) ? array_map( 'intval', (array) wp_unslash( $_POST[ $ids_field ] ) ) : [];
 
     $input = [
-      'id'          => isset( $_POST['facr_id'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_id'] ) ) : '',
+      'id'          => $id,
       'created_at'  => isset( $_POST['facr_created_at'] ) ? sanitize_text_field( wp_unslash( $_POST['facr_created_at'] ) ) : '',
       'status'      => isset( $_POST['facr_status'] ) ? sanitize_key( wp_unslash( $_POST['facr_status'] ) ) : 'active',
       'scope_type'  => isset( $_POST['facr_scope_type'] ) ? sanitize_key( wp_unslash( $_POST['facr_scope_type'] ) ) : 'all',
@@ -140,6 +157,10 @@ final class RuleForm {
   // --------------------------------------------------------------- form ----
 
   public static function render( string $action ): void {
+    if ( ! Fluent::can_manage() ) {
+      wp_die( esc_html__( 'You do not have permission to manage commission rules.', 'fa-commission-rules' ), '', [ 'response' => 403 ] );
+    }
+
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen state.
     $rule_id = isset( $_GET['rule'] ) ? sanitize_text_field( wp_unslash( $_GET['rule'] ) ) : '';
     $rule    = $action === 'edit' && $rule_id !== '' ? Store::get( $rule_id ) : null;
@@ -150,6 +171,12 @@ final class RuleForm {
       delete_transient( self::error_key() );
       $errors = (array) ( $stashed['errors'] ?? [] );
       $rule   = (array) ( $stashed['input'] ?? $rule );
+    } elseif ( $action === 'edit' && $rule_id !== '' && ! $rule ) {
+      // The link was to a real rule; it is gone now (deleted here or elsewhere).
+      // Falling through to the "add" defaults under an "Edit" heading would let
+      // this exact submit create a new rule under the old id's clothes.
+      wp_safe_redirect( Menu::page_url( [ 'facr_notice' => 'missing' ] ) );
+      exit;
     }
 
     if ( ! $rule ) {

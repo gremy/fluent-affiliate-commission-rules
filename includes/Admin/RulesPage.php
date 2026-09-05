@@ -408,6 +408,8 @@ final class RulesPage {
       'saved_conflict' => [ 'warning', __( 'Rule saved, but another active rule is exactly as specific, so the newer of the two wins. Look for the Conflict flag below.', 'fa-commission-rules' ) ],
       'deleted'        => [ 'success', __( 'Rule deleted.', 'fa-commission-rules' ) ],
       'bulk'           => [ 'success', __( 'Bulk action applied.', 'fa-commission-rules' ) ],
+      'missing'        => [ 'error', __( 'That rule no longer exists.', 'fa-commission-rules' ) ],
+      'readonly'       => [ 'error', __( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ) ],
     ];
     if ( ! isset( $messages[ $notice ] ) ) {
       return;
