@@ -15,8 +15,17 @@ defined( 'ABSPATH' ) || exit;
  * @package FACommissionRules
  */
 final class ReferralHooks {
-  /** Referral types this handler owns. Renewals are handled by the recurring filter. */
+  /** Referral types this handler prices. Renewals are priced by the recurring filter. */
   private const TYPES = [ 'sale', 'payment', 'lifetime_sale' ];
+
+  /**
+   * Renewal resolutions parked between the two filters, keyed "affiliate:order".
+   * A renewal is priced before its referral row exists, so the stamp can only be
+   * written on the second pass.
+   *
+   * @var array<string,array<string,mixed>>
+   */
+  private static $renewal_handoff = [];
 
   public function register(): void {
     add_filter( 'fluent_affiliate/referral_data', [ $this, 'filter_referral_data' ], 20, 2 );
@@ -34,6 +43,11 @@ final class ReferralHooks {
       return $data;
     }
     $type = (string) ( $data['type'] ?? 'sale' );
+    if ( $type === 'recurring_sale' ) {
+      // Priced already, by the recurring filter: all this pass adds is the audit
+      // trail that filter had no referral row to write on.
+      return $this->apply_renewal_handoff( $data );
+    }
     if ( ! in_array( $type, self::TYPES, true ) ) {
       return $data;
     }
@@ -64,7 +78,20 @@ final class ReferralHooks {
       return $data; // Not our affiliate: Fluent's own math stands.
     }
 
-    $data['amount']   = $result['amount'];
+    $data['amount'] = $result['amount'];
+
+    return $this->annotate( $data, $result );
+  }
+
+  /**
+   * The audit trail every touched referral carries: the stamp in settings, plus a
+   * short tail on the description, which is the only field the CSV export shows.
+   *
+   * @param array<string,mixed> $data
+   * @param array<string,mixed> $result
+   * @return array<string,mixed>
+   */
+  private function annotate( array $data, array $result ): array {
     $data['settings'] = $this->stamp( (array) ( $data['settings'] ?? [] ), $result );
 
     $summary = self::summary( $result );
@@ -76,6 +103,25 @@ final class ReferralHooks {
     }
 
     return $data;
+  }
+
+  /**
+   * Stamp a renewal referral from the resolution its own filter parked earlier.
+   * The amount is deliberately left alone — it already carries this resolution,
+   * and recomputing it here would price the renewal twice.
+   *
+   * @param array<string,mixed> $data
+   * @return array<string,mixed>
+   */
+  private function apply_renewal_handoff( array $data ): array {
+    $key = (int) ( $data['affiliate_id'] ?? 0 ) . ':' . (int) ( $data['provider_id'] ?? 0 );
+    if ( ! isset( self::$renewal_handoff[ $key ] ) ) {
+      return $data;
+    }
+    $result = self::$renewal_handoff[ $key ];
+    unset( self::$renewal_handoff[ $key ] );
+
+    return $this->annotate( $data, $result );
   }
 
   /**
@@ -150,11 +196,16 @@ final class ReferralHooks {
       $lines = [ LineBuilder::whole_order_line( $order_total ) ];
     }
 
-    // ponytail: the renewal base rate lives on getBaseRenewalCommission(), which is
-    // public but only reachable on a RecurringReferral instance whose construction
-    // registers hooks. Scaling Fluent's own figure by remainder/total is exact for a
-    // percentage base rate and only approximate for a flat one — the documented ceiling.
-    $base = static fn( float $remainder ): float => $amount * ( $remainder / $order_total );
+    // Fluent's own $amount is already blended: its renewal rate table prices the
+    // lines it matches and adds the base rate on the rest. Store::resolvable()
+    // feeds those same rows to the resolver, so prorating $amount would pay every
+    // matched line a second time. The base rate itself is asked for instead.
+    $base = function ( float $remainder ) use ( $affiliate, $order_total, $amount ): float {
+      if ( $remainder <= 0 || $order_total <= 0 ) {
+        return 0.0;
+      }
+      return max( 0.0, $this->renewal_base( $affiliate, $order_total, $amount ) * ( $remainder / $order_total ) );
+    };
 
     $result = Resolver::resolve(
       [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => (int) ( $affiliate->group_id ?? 0 ) ],
@@ -171,12 +222,55 @@ final class ReferralHooks {
       return $commission;
     }
 
+    // The referral row is built after this filter returns, so park the resolution
+    // for filter_referral_data() to stamp. Keyed by order as well as affiliate, so
+    // two renewals in one request cannot pick up each other's.
+    $order_id = $this->renewal_order_id( $context );
+    if ( $order_id > 0 ) {
+      self::$renewal_handoff[ (int) $affiliate->id . ':' . $order_id ] = $result;
+    }
+
     if ( $is_array ) {
       $commission['amount'] = $result['amount'];
       return $commission;
     }
 
     return (float) $result['amount'];
+  }
+
+  /**
+   * Fluent's own renewal base commission for the whole order.
+   *
+   * @param object $affiliate
+   * @param float  $blended Fluent's already-blended figure, the fallback.
+   */
+  private function renewal_base( $affiliate, float $order_total, float $blended ): float {
+    $class = '\\FluentAffiliatePro\\App\\Services\\Integrations\\WooCommerce\\RecurringReferral';
+    if ( class_exists( $class ) ) {
+      // getBaseRenewalCommission() is public on RecurringCommissionTrait and reads
+      // only the group or global renewal rate, so the WooCommerce host class answers
+      // for every provider. Nothing in its hierarchy declares a constructor — hooks
+      // are added in register() — so instantiating it here is inert.
+      return (float) ( new $class() )->getBaseRenewalCommission( $affiliate, $order_total );
+    }
+
+    // ponytail: no Pro means no renewal rate table to read — and no renewals either,
+    // since Pro owns that integration. The ceiling of this fallback is the bug it
+    // replaces: it double-pays any line Fluent's own renewal table already priced.
+    return $blended;
+  }
+
+  /**
+   * The renewal order's id, which is what Fluent writes as provider_id.
+   *
+   * @param array<string,mixed> $context
+   */
+  private function renewal_order_id( array $context ): int {
+    $order = $context['vendor_order'] ?? null;
+    if ( $order instanceof \WC_Order ) {
+      return (int) $order->get_id();
+    }
+    return (int) ( ( (array) ( $context['order_data'] ?? [] ) )['id'] ?? 0 );
   }
 
   /**
@@ -248,7 +342,8 @@ final class ReferralHooks {
   }
 
   /**
-   * "1/2 · 10%" — short enough for the description column and the CSV export,
+   * "1/2 · 10%", or "1/2 · 50f" for a flat rate — short enough for the description
+   * column and the CSV export,
    * which is the only export either plugin exposes. Deliberately untranslated:
    * it is machine-readable shorthand, and a locale-dependent one would make two
    * exports of the same data impossible to diff.
@@ -265,7 +360,8 @@ final class ReferralHooks {
       $matched++;
       $rates[] = $line['rate_type'] === 'percentage'
         ? rtrim( rtrim( number_format( (float) $line['rate'], 2, '.', '' ), '0' ), '.' ) . '%'
-        : rtrim( rtrim( number_format( (float) $line['rate'], 2, '.', '' ), '0' ), '.' );
+        // A trailing "f" so a flat 50 cannot be read as 50%.
+        : rtrim( rtrim( number_format( (float) $line['rate'], 2, '.', '' ), '0' ), '.' ) . 'f';
     }
     if ( $matched === 0 ) {
       return '';

@@ -35,6 +35,7 @@ if ( ! Fluent::ready() ) {
 
 $facr_backup      = Fluent::get_option( FACR_RULES_KEY, [] );
 $facr_woo_backup  = Fluent::get_option( '_woo_connector_config', [] );
+$facr_ref_backup  = get_option( '_fa_referral_settings', null );
 $facr_group_id    = 0;
 $facr_aff_id      = 0;
 $facr_user_id     = 0;
@@ -42,6 +43,7 @@ $facr_cat_parent  = 0;
 $facr_cat_child   = 0;
 $facr_product_id  = 0;
 $facr_product_b   = 0;
+$facr_product_c   = 0;
 
 try {
   // ------------------------------------------------------------ fixtures ---
@@ -95,6 +97,7 @@ try {
   if ( Fluent::has_woo() ) {
     $facr_product_id = (int) wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Test Product A', 'post_status' => 'publish' ] );
     $facr_product_b  = (int) wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Test Product B', 'post_status' => 'publish' ] );
+    $facr_product_c  = (int) wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'FACR Test Product C', 'post_status' => 'publish' ] );
     if ( $facr_cat_child > 0 ) {
       wp_set_object_terms( $facr_product_id, [ $facr_cat_child ], 'product_cat' );
     }
@@ -108,6 +111,18 @@ try {
     [ 'custom_affiliate_rate' => 'no', 'renewal_custom_affiliate_rate' => 'no' ]
   );
   Fluent::update_option( '_woo_connector_config', $facr_neutral_woo );
+
+  // The renewal base rate is a global referral setting, so pin it: the renewal
+  // maths below would otherwise depend on whatever the live store is set to.
+  // Utility caches the settings in a static, hence the uncached re-read.
+  update_option(
+    '_fa_referral_settings',
+    array_merge(
+      is_array( $facr_ref_backup ) ? $facr_ref_backup : [],
+      [ 'renewal_rate' => 5, 'renewal_rate_type' => 'percentage' ]
+    )
+  );
+  \FluentAffiliate\App\Helper\Utility::getReferralSettings( false );
 
   // ---------------------------------------------------------------- store ---
   Fluent::update_option( FACR_RULES_KEY, [] );
@@ -382,6 +397,120 @@ try {
   facr_it( 'renewal: array payload stays an array', is_array( $facr_renewal_array ) && isset( $facr_renewal_array['amount'] ) );
   facr_it( 'renewal: array payload keeps its other keys', ( $facr_renewal_array['rate'] ?? null ) === 5 );
 
+  // Fluent's renewal rate table prices product A itself, and Store::resolvable()
+  // hands those same rows to the resolver — so the figure Fluent passes in is
+  // already blended, and prorating it would pay product A twice.
+  Fluent::update_option(
+    '_woo_connector_config',
+    array_merge(
+      $facr_neutral_woo,
+      [
+        'renewal_custom_affiliate_rate'  => 'yes',
+        'renewal_custom_affiliate_rates' => [
+          [ 'object_type' => 'product', 'object_ids' => [ $facr_product_id ], 'rate' => '10', 'rate_type' => 'percentage' ],
+        ],
+      ]
+    )
+  );
+  [ $facr_c_rule ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'product',
+      'target_ids'  => [ (string) $facr_product_c ],
+      'rate'        => '20',
+      'rate_type'   => 'percentage',
+      'status'      => 'active',
+      'note'        => 'renewal base test',
+    ]
+  );
+  Store::save( $facr_c_rule );
+
+  $facr_blend_ctx = [
+    'affiliate'       => \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ),
+    'order_data'      => [
+      'id'                   => 4242,
+      'referral_order_total' => 150.0,
+      'items'                => [
+        [ 'item_id' => $facr_product_id, 'title' => 'A', 'subtotal' => 100.0, 'tax' => 0.0, 'total' => 100.0 ],
+        [ 'item_id' => $facr_product_b, 'title' => 'B', 'subtotal' => 20.0, 'tax' => 0.0, 'total' => 20.0 ],
+        [ 'item_id' => $facr_product_c, 'title' => 'C', 'subtotal' => 30.0, 'tax' => 0.0, 'total' => 30.0 ],
+      ],
+    ],
+    'provider'        => 'woo',
+    'vendor_order'    => null,
+    'parent_referral' => null,
+  ];
+  // 12.5 is what Fluent computes here: 10% of A plus its 5% base on the other 50.
+  // Ours: 10 on A, 6 on C, and the 5% base on the 20 nobody claimed — 17, not 17.67.
+  $facr_blended = apply_filters( 'fluent_affiliate/recurring_commission', 12.5, $facr_blend_ctx );
+  facr_it( 'renewal: the remainder is priced from the base rate, not the blended amount', abs( (float) $facr_blended - 17.0 ) < 0.001 );
+
+  // The renewal referral row is built after the pricing filter has run, so the
+  // stamp can only be written on the referral_data pass.
+  $facr_renewal_row = array_merge(
+    $facr_payload,
+    [
+      'type'        => 'recurring_sale',
+      'amount'      => $facr_blended,
+      'provider_id' => 4242,
+      'products'    => $facr_blend_ctx['order_data']['items'],
+    ]
+  );
+  $facr_renewal_out = apply_filters( 'fluent_affiliate/referral_data', $facr_renewal_row, 'woo' );
+  facr_it( 'renewal: the referral carries the audit stamp', isset( $facr_renewal_out['settings']['fa_commission_rules']['version'] ) );
+  facr_it( 'renewal: stamping never rewrites the amount', abs( (float) $facr_renewal_out['amount'] - 17.0 ) < 0.001 );
+  facr_it( 'renewal: the description gains a rules note', strpos( (string) $facr_renewal_out['description'], 'rules:' ) !== false );
+
+  $facr_renewal_again = apply_filters( 'fluent_affiliate/referral_data', $facr_renewal_row, 'woo' );
+  facr_it( 'renewal: the parked resolution is used once and dropped', ! isset( $facr_renewal_again['settings']['fa_commission_rules'] ) );
+
+  Store::delete( $facr_c_rule['id'] );
+  Fluent::update_option( '_woo_connector_config', $facr_neutral_woo );
+
+  // A deliberate 0% renewal rule is a decision too: product B carries no other
+  // rule, so the affiliate-wide 0% one wins the whole renewal.
+  [ $facr_zero_renewal_rule ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'rate'        => '0',
+      'rate_type'   => 'percentage',
+      'status'      => 'active',
+      'note'        => 'zero renewal test',
+    ]
+  );
+  Store::save( $facr_zero_renewal_rule );
+  $facr_zero_ctx = [
+    'affiliate'       => \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ),
+    'order_data'      => [
+      'id'                   => 4343,
+      'referral_order_total' => 20.0,
+      'items'                => [ [ 'item_id' => $facr_product_b, 'title' => 'B', 'subtotal' => 20.0, 'tax' => 0.0, 'total' => 20.0 ] ],
+    ],
+    'provider'        => 'woo',
+    'vendor_order'    => null,
+    'parent_referral' => null,
+  ];
+  $facr_zero_renewal_amount = apply_filters( 'fluent_affiliate/recurring_commission', 1.0, $facr_zero_ctx );
+  facr_it( 'renewal: a 0% rule zeroes the renewal', abs( (float) $facr_zero_renewal_amount ) < 0.001 );
+  $facr_zero_renewal_out = apply_filters(
+    'fluent_affiliate/referral_data',
+    array_merge( $facr_payload, [ 'type' => 'recurring_sale', 'amount' => $facr_zero_renewal_amount, 'provider_id' => 4343 ] ),
+    'woo'
+  );
+  facr_it( 'renewal: a 0% rule is not discarded as a zero-amount referral', apply_filters( 'fluent_affiliate/ignore_zero_amount_referral', true, $facr_zero_renewal_out ) === false );
+  Store::delete( $facr_zero_renewal_rule['id'] );
+
+  // A renewal referral nobody parked a resolution for keeps Fluent's own figure.
+  $facr_orphan_out = apply_filters(
+    'fluent_affiliate/referral_data',
+    array_merge( $facr_payload, [ 'type' => 'recurring_sale', 'provider_id' => 9999 ] ),
+    'woo'
+  );
+  facr_it( 'renewal: an unparked referral is untouched', abs( (float) $facr_orphan_out['amount'] - 7.5 ) < 0.001 && ! isset( $facr_orphan_out['settings']['fa_commission_rules'] ) );
+
   // A group rule applies to every member of the group, whatever the member's own
   // rate type. Fluent's own group RATE is conditional (it only applies when the
   // affiliate's rate_type is literally 'group'); our group RULES are not, and
@@ -487,7 +616,13 @@ try {
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );
-  foreach ( [ $facr_product_id, $facr_product_b ] as $facr_dead_product ) {
+  if ( is_array( $facr_ref_backup ) ) {
+    update_option( '_fa_referral_settings', $facr_ref_backup );
+  } else {
+    delete_option( '_fa_referral_settings' );
+  }
+  \FluentAffiliate\App\Helper\Utility::getReferralSettings( false );
+  foreach ( [ $facr_product_id, $facr_product_b, $facr_product_c ] as $facr_dead_product ) {
     if ( ! empty( $facr_dead_product ) ) {
       wp_delete_post( (int) $facr_dead_product, true );
     }
