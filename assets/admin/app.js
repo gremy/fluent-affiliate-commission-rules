@@ -74,6 +74,24 @@
     } );
   }
 
+  /** scope_id is null (not 0) so the select shows its placeholder; it is sent as 0. */
+  function blankForm() {
+    return {
+      id: '',
+      status: 'active',
+      scope_type: 'all',
+      scope_id: null,
+      target_type: 'all',
+      category_ids: [],
+      product_ids: [],
+      rate: null,
+      rate_type: 'percentage',
+      starts_at: '',
+      ends_at: '',
+      note: ''
+    };
+  }
+
   var LIST_TEMPLATE = [
     '<div class="fa-affiliate-wrap facr-app" v-loading="loading">',
     '  <div class="fa_page_heading"><h1 class="fa_page_title">{{ i18n.page_title }}</h1></div>',
@@ -142,7 +160,77 @@
     '      </el-table>',
     '    </div>',
     '  </div>',
-    '  <!-- facr:editor -->',
+    '  <el-drawer v-model="editor.open" :title="editorTitle" :size="editor.size" class="fa_common_drawer" :close-on-click-modal="false" :destroy-on-close="true">',
+    '    <el-form label-position="top" @submit.prevent="save">',
+    '      <el-divider content-position="left">{{ i18n.section_audience }}</el-divider>',
+    '      <el-form-item>',
+    '        <el-radio-group v-model="editor.form.scope_type" @change="editor.form.scope_id = null">',
+    '          <el-radio-button value="all">{{ i18n.scope_all }}</el-radio-button>',
+    '          <el-radio-button v-if="options.has_pro" value="group">{{ i18n.scope_group }}</el-radio-button>',
+    '          <el-radio-button value="affiliate">{{ i18n.scope_affiliate }}</el-radio-button>',
+    '        </el-radio-group>',
+    '      </el-form-item>',
+    '      <el-form-item v-if="editor.form.scope_type !== \'all\'" :error="editor.errors.scope_id">',
+    '        <el-select v-model="editor.form.scope_id" filterable :placeholder="editor.form.scope_type === \'group\' ? i18n.choose_group : i18n.choose_affiliate" style="width:100%">',
+    '          <el-option v-for="choice in scopeChoices" :key="choice.id" :value="choice.id" :label="choice.label"></el-option>',
+    '        </el-select>',
+    '      </el-form-item>',
+    '      <el-divider content-position="left">{{ i18n.section_target }}</el-divider>',
+    '      <el-form-item :error="editor.form.target_type === \'all\' ? editor.errors.target_ids : \'\'">',
+    '        <el-radio-group v-model="editor.form.target_type">',
+    '          <el-radio-button value="all">{{ i18n.target_all }}</el-radio-button>',
+    '          <el-radio-button v-if="options.has_woo" value="category">{{ i18n.target_category }}</el-radio-button>',
+    '          <el-radio-button v-if="options.has_woo" value="product">{{ i18n.target_product }}</el-radio-button>',
+    '        </el-radio-group>',
+    '      </el-form-item>',
+    '      <el-form-item v-if="editor.form.target_type === \'category\'" :error="editor.errors.target_ids">',
+    '        <el-select v-model="editor.form.category_ids" multiple filterable :placeholder="i18n.choose_categories" style="width:100%">',
+    '          <el-option v-for="cat in options.categories" :key="cat.id" :value="cat.id" :label="cat.label"></el-option>',
+    '        </el-select>',
+    '      </el-form-item>',
+    '      <el-form-item v-if="editor.form.target_type === \'product\'" :error="editor.errors.target_ids">',
+    '        <el-select v-model="editor.form.product_ids" multiple filterable remote reserve-keyword :remote-method="searchProducts" :loading="editor.productLoading" :placeholder="i18n.search_products" :no-data-text="editor.productQuery.length < 2 ? i18n.search_min : i18n.search_none" style="width:100%">',
+    '          <el-option v-for="product in editor.productOptions" :key="product.id" :value="product.id" :label="product.label"></el-option>',
+    '        </el-select>',
+    '      </el-form-item>',
+    '      <el-divider content-position="left">{{ i18n.section_money }}</el-divider>',
+    '      <el-form-item :error="editor.errors.rate">',
+    '        <div class="facr-money">',
+    '          <el-input-number v-model="editor.form.rate" :min="0" :max="editor.form.rate_type === \'percentage\' ? 100 : Infinity" :precision="2" :step="1" :controls="false" style="width:140px"></el-input-number>',
+    '          <el-radio-group v-model="editor.form.rate_type">',
+    '            <el-radio-button value="percentage">{{ i18n.rate_percentage }}</el-radio-button>',
+    '            <el-radio-button value="flat">{{ i18n.rate_flat }}</el-radio-button>',
+    '          </el-radio-group>',
+    '        </div>',
+    '        <div class="facr-help">{{ i18n.rate_help }}</div>',
+    '      </el-form-item>',
+    '      <el-divider content-position="left">{{ i18n.section_time }}</el-divider>',
+    '      <el-form-item :error="editor.errors.starts_at || editor.errors.ends_at">',
+    '        <div class="facr-dates">',
+    '          <el-date-picker v-model="editor.form.starts_at" type="date" value-format="YYYY-MM-DD" :placeholder="i18n.starts_at" style="width:160px"></el-date-picker>',
+    '          <el-date-picker v-model="editor.form.ends_at" type="date" value-format="YYYY-MM-DD" :placeholder="i18n.ends_at" style="width:160px"></el-date-picker>',
+    '          <el-button link type="primary" @click="presetYear">{{ i18n.preset_year }}</el-button>',
+    '        </div>',
+    '        <div class="facr-help">{{ i18n.time_help }}</div>',
+    '      </el-form-item>',
+    '      <el-divider content-position="left">{{ i18n.section_note }}</el-divider>',
+    '      <el-form-item>',
+    '        <el-input v-model="editor.form.note" type="textarea" :rows="2" maxlength="200"></el-input>',
+    '        <div class="facr-help">{{ i18n.note_help }}</div>',
+    '      </el-form-item>',
+    '      <el-form-item :label="i18n.status_label">',
+    '        <el-radio-group v-model="editor.form.status">',
+    '          <el-radio-button value="active">{{ i18n.status_active }}</el-radio-button>',
+    '          <el-radio-button value="inactive">{{ i18n.status_inactive_option }}</el-radio-button>',
+    '        </el-radio-group>',
+    '      </el-form-item>',
+    '      <p class="facr-result"><strong>{{ i18n.result_label }}</strong> {{ resultSentence }}</p>',
+    '    </el-form>',
+    '    <template #footer>',
+    '      <el-button @click="closeEditor">{{ i18n.cancel }}</el-button>',
+    '      <el-button type="primary" :loading="editor.saving" @click="save">{{ i18n.save }}</el-button>',
+    '    </template>',
+    '  </el-drawer>',
     '</div>'
   ].join( '\n' );
 
@@ -159,8 +247,18 @@
         defaultRate: cfg.default_rate || '',
         options: { affiliates: [], groups: [], categories: [], has_pro: flag( cfg.has_pro ), has_woo: flag( cfg.has_woo ) },
         filters: { scope: '', target: '', status: '', q: '' },
-        selected: []
-        // facr:editor-data
+        selected: [],
+        editor: {
+          open: false,
+          saving: false,
+          isEdit: false,
+          size: '520px',
+          errors: {},
+          productQuery: '',
+          productLoading: false,
+          productOptions: [],
+          form: blankForm()
+        }
       };
     },
 
@@ -180,13 +278,72 @@
       },
       selectedText: function () {
         return H.sprintf( i18n.selected_count, this.selected.length );
+      },
+      editorTitle: function () {
+        return this.editor.isEdit ? i18n.editor_edit_title : i18n.editor_add_title;
+      },
+      scopeChoices: function () {
+        return this.editor.form.scope_type === 'group' ? this.options.groups : this.options.affiliates;
+      },
+      /** What the rule will do, in words, kept current while you type; mirrors Labels::describe(). */
+      resultSentence: function () {
+        var form  = this.editor.form;
+        var byId  = {};
+        var names = [];
+        this.scopeChoices.forEach( function ( choice ) {
+          byId[ choice.id ] = choice.label;
+        } );
+        if ( form.target_type === 'category' ) {
+          var cats = {};
+          this.options.categories.forEach( function ( cat ) {
+            cats[ cat.id ] = cat.name || cat.label;
+          } );
+          names = form.category_ids.map( function ( id ) {
+            return cats[ id ];
+          } );
+        } else if ( form.target_type === 'product' ) {
+          var products = {};
+          this.editor.productOptions.forEach( function ( product ) {
+            products[ product.id ] = product.label;
+          } );
+          names = form.product_ids.map( function ( id ) {
+            return products[ id ];
+          } );
+        }
+        return H.sentence(
+          {
+            scope_type: form.scope_type,
+            scope_id: form.scope_id,
+            target_type: form.target_type,
+            target_ids: form.target_type === 'category' ? form.category_ids : form.product_ids,
+            rate: form.rate === null ? 0 : form.rate,
+            rate_type: form.rate_type,
+            starts_at: form.starts_at || '',
+            ends_at: form.ends_at || ''
+          },
+          { scope_name: form.scope_id !== null ? ( byId[ form.scope_id ] || '' ) : '', target_names: names, money_template: MONEY.money_template, decimal_separator: MONEY.decimal_separator },
+          i18n
+        );
       }
-      // facr:editor-computed
     },
 
     created: function () {
-      this.load();
-      this.loadOptions();
+      var vm     = this;
+      var params = new URLSearchParams( window.location.search );
+      vm.load();
+      vm.loadOptions().then( function () {
+        // ?action=add&affiliate_id=N from the affiliate profile card: open the
+        // editor already scoped to that affiliate once the picker has its options.
+        if ( params.get( 'action' ) !== 'add' ) {
+          return;
+        }
+        vm.openEditor();
+        var affiliateId = parseInt( params.get( 'affiliate_id' ) || '0', 10 );
+        if ( affiliateId > 0 ) {
+          vm.editor.form.scope_type = 'affiliate';
+          vm.editor.form.scope_id   = affiliateId;
+        }
+      } );
     },
 
     methods: {
@@ -288,10 +445,116 @@
         } );
       },
       openEditor: function ( rule ) {
-        // Task 8 replaces this stub with the drawer; until then the button is inert.
-        return rule;
+        var editor = this.editor;
+        editor.errors         = {};
+        editor.productQuery   = '';
+        editor.productOptions = [];
+        editor.isEdit         = !! ( rule && rule.id );
+        // Full width on a phone, a side panel on a desktop; decided per open, not per resize.
+        editor.size = window.innerWidth < 640 ? '100%' : '520px';
+        if ( editor.isEdit ) {
+          editor.form = {
+            id: rule.id,
+            status: rule.status,
+            scope_type: rule.scope_type,
+            scope_id: rule.scope_type === 'all' ? null : rule.scope_id,
+            target_type: rule.target_type,
+            category_ids: rule.target_type === 'category' ? rule.target_ids.slice() : [],
+            product_ids: rule.target_type === 'product' ? rule.target_ids.slice() : [],
+            rate: rule.rate,
+            rate_type: rule.rate_type,
+            starts_at: rule.starts_at || '',
+            ends_at: rule.ends_at || '',
+            note: rule.note || ''
+          };
+          // The server sends {id,label} for every target, so the product select
+          // can show names for ids the remote search has not returned yet.
+          editor.productOptions = rule.target_type === 'product' ? ( rule.target_options || [] ).slice() : [];
+        } else {
+          editor.form = blankForm();
+        }
+        editor.open = true;
+      },
+      closeEditor: function () {
+        this.editor.open = false;
+      },
+      searchProducts: function ( query ) {
+        var editor = this.editor;
+        var form   = this.editor.form;
+        editor.productQuery = String( query || '' ).trim();
+        // Keep the options for everything already selected, or the tags lose their labels.
+        var keep = editor.productOptions.filter( function ( product ) {
+          return form.product_ids.indexOf( product.id ) !== -1;
+        } );
+        if ( editor.productQuery.length < 2 ) {
+          editor.productOptions = keep;
+          return;
+        }
+        editor.productLoading = true;
+        api( '/products', { query: { search: editor.productQuery } } ).then( function ( found ) {
+          var seen = {};
+          keep.forEach( function ( product ) {
+            seen[ product.id ] = true;
+          } );
+          ( found || [] ).forEach( function ( product ) {
+            if ( ! seen[ product.id ] ) {
+              keep.push( product );
+              seen[ product.id ] = true;
+            }
+          } );
+          editor.productOptions = keep;
+          editor.productLoading = false;
+        }, function ( error ) {
+          editor.productLoading = false;
+          notify( 'error', error.message );
+        } );
+      },
+      presetYear: function () {
+        var preset = H.presetFirst12Months( new Date() );
+        this.editor.form.starts_at = preset.starts_at;
+        this.editor.form.ends_at   = preset.ends_at;
+      },
+      save: function () {
+        var vm     = this;
+        var editor = vm.editor;
+        var form   = editor.form;
+        if ( editor.saving ) {
+          return;
+        }
+        editor.saving = true;
+        editor.errors = {};
+        var body = {
+          id: form.id,
+          status: form.status,
+          scope_type: form.scope_type,
+          scope_id: form.scope_type === 'all' || form.scope_id === null ? 0 : form.scope_id,
+          target_type: form.target_type,
+          // Only the picker the chosen target type owns is sent, so a stale
+          // picker can never smuggle ids into the saved rule.
+          target_ids: form.target_type === 'category' ? form.category_ids : ( form.target_type === 'product' ? form.product_ids : [] ),
+          rate: form.rate === null ? '' : form.rate,
+          rate_type: form.rate_type,
+          starts_at: form.starts_at || '',
+          ends_at: form.ends_at || '',
+          note: form.note
+        };
+        api( '/rules', { method: 'POST', body: body } ).then( function ( data ) {
+          editor.saving = false;
+          editor.open   = false;
+          notify( 'success', H.sprintf( i18n.rule_saved, data.rule && data.rule.labels ? data.rule.labels.sentence : '' ) );
+          if ( data.tie && data.tie.length ) {
+            EP.ElMessageBox.alert( i18n.tie_warning, i18n.tie_title, { type: 'warning', confirmButtonText: i18n.confirm_ok } ).catch( function () {} );
+          }
+          vm.load();
+        }, function ( error ) {
+          editor.saving = false;
+          if ( error.status === 422 && error.data && error.data.errors ) {
+            editor.errors = error.data.errors;
+            return;
+          }
+          notify( 'error', error.message );
+        } );
       }
-      // facr:editor-methods
     }
   } );
 
