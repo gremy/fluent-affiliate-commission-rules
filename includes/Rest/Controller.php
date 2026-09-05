@@ -173,20 +173,122 @@ final class Controller {
   }
 
   // -------------------------------------------------------------- writes ---
-  // (Task 4 adds save(), delete() and bulk() here.)
 
-  /** @return WP_Error */
+  /** @return WP_REST_Response|WP_Error */
   public function save( WP_REST_Request $request ) {
-    return new WP_Error( 'facr_not_implemented', 'not implemented', [ 'status' => 501 ] );
+    $body = $request->get_json_params();
+    if ( ! is_array( $body ) ) {
+      $body = (array) $request->get_body_params();
+    }
+
+    $id = sanitize_text_field( self::scalar( $body['id'] ?? '' ) );
+
+    if ( strncmp( $id, 'fluent:', 7 ) === 0 ) {
+      // Store::save() already no-ops on this prefix, but a silent no-op would
+      // let the client show "saved" for a save that did nothing.
+      return new WP_Error(
+        'facr_readonly',
+        __( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ),
+        [ 'status' => 403 ]
+      );
+    }
+
+    $existing = $id !== '' ? Store::get( $id ) : null;
+    if ( $id !== '' && ! $existing ) {
+      // Deleted between the editor opening and this submit. Recreating it under
+      // the id the browser still holds would silently resurrect stale data.
+      return new WP_Error( 'facr_missing', __( 'That rule no longer exists.', 'fa-commission-rules' ), [ 'status' => 404 ] );
+    }
+
+    $target_ids = [];
+    foreach ( (array) ( $body['target_ids'] ?? [] ) as $target_id ) {
+      $target_ids[] = (int) self::scalar( $target_id );
+    }
+
+    $input = [
+      'id'          => $id,
+      // Never from the request: created_at decides the newest-wins tie-break,
+      // i.e. real money. An edit keeps its stamp; a new rule is stamped by Store.
+      'created_at'  => (string) ( $existing['created_at'] ?? '' ),
+      'status'      => sanitize_key( self::scalar( $body['status'] ?? 'active' ) ),
+      'scope_type'  => sanitize_key( self::scalar( $body['scope_type'] ?? 'all' ) ),
+      'scope_id'    => (int) self::scalar( $body['scope_id'] ?? 0 ),
+      'target_type' => sanitize_key( self::scalar( $body['target_type'] ?? 'all' ) ),
+      'target_ids'  => $target_ids,
+      'rate'        => sanitize_text_field( self::scalar( $body['rate'] ?? '' ) ),
+      'rate_type'   => sanitize_key( self::scalar( $body['rate_type'] ?? 'percentage' ) ),
+      'starts_at'   => sanitize_text_field( self::scalar( $body['starts_at'] ?? '' ) ),
+      'ends_at'     => sanitize_text_field( self::scalar( $body['ends_at'] ?? '' ) ),
+      'note'        => sanitize_text_field( self::scalar( $body['note'] ?? '' ) ),
+    ];
+
+    [ $rule, $errors ] = Store::validate( $input );
+    if ( $errors ) {
+      return new WP_REST_Response( [ 'errors' => $errors ], 422 );
+    }
+
+    Store::save( $rule );
+
+    // Non-blocking: the rule is saved either way, but an equally specific rival
+    // means the only thing deciding real money is which one is newer.
+    $ties = Resolver::tie_map( array_merge( Store::all(), Store::fluent_global_rules() ) );
+
+    return new WP_REST_Response(
+      [
+        'rule' => $this->present( $rule ),
+        'tie'  => array_values( (array) ( $ties[ (string) $rule['id'] ] ?? [] ) ),
+      ],
+      $id === '' ? 201 : 200
+    );
   }
 
-  /** @return WP_Error */
+  /** @return WP_REST_Response|WP_Error */
   public function delete( WP_REST_Request $request ) {
-    return new WP_Error( 'facr_not_implemented', 'not implemented', [ 'status' => 501 ] );
+    $id = sanitize_text_field( self::scalar( $request->get_param( 'id' ) ) );
+    if ( strncmp( $id, 'fluent:', 7 ) === 0 ) {
+      return new WP_Error(
+        'facr_readonly',
+        __( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ),
+        [ 'status' => 400 ]
+      );
+    }
+    if ( ! Store::delete( $id ) ) {
+      return new WP_Error( 'facr_missing', __( 'That rule no longer exists.', 'fa-commission-rules' ), [ 'status' => 404 ] );
+    }
+    return new WP_REST_Response( [ 'deleted' => $id ] );
   }
 
-  /** @return WP_Error */
+  /** @return WP_REST_Response|WP_Error */
   public function bulk( WP_REST_Request $request ) {
-    return new WP_Error( 'facr_not_implemented', 'not implemented', [ 'status' => 501 ] );
+    $body = $request->get_json_params();
+    if ( ! is_array( $body ) ) {
+      $body = (array) $request->get_body_params();
+    }
+
+    $action = sanitize_key( self::scalar( $body['action'] ?? '' ) );
+    if ( ! in_array( $action, [ 'activate', 'deactivate', 'delete' ], true ) ) {
+      return new WP_Error( 'facr_bad_action', __( 'Unknown bulk action.', 'fa-commission-rules' ), [ 'status' => 400 ] );
+    }
+
+    $ids = [];
+    foreach ( (array) ( $body['ids'] ?? [] ) as $raw ) {
+      $id = sanitize_text_field( self::scalar( $raw ) );
+      if ( $id !== '' && strncmp( $id, 'fluent:', 7 ) !== 0 ) {
+        $ids[] = $id;
+      }
+    }
+
+    $count = 0;
+    if ( $ids ) {
+      if ( $action === 'activate' ) {
+        $count = Store::set_status( $ids, 'active' );
+      } elseif ( $action === 'deactivate' ) {
+        $count = Store::set_status( $ids, 'inactive' );
+      } else {
+        $count = Store::delete_many( $ids );
+      }
+    }
+
+    return new WP_REST_Response( [ 'count' => $count ] );
   }
 }

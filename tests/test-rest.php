@@ -197,7 +197,83 @@ try {
   Store::delete( $facr_r_rule['id'] );
 
   // ------------------------------------------------------------- writes ---
-  // (Task 4 appends here.)
+  wp_set_current_user( $facr_r_sub );
+  facr_rest( 'subscriber POST /rules is 403', facr_rest_call( 'POST', '/rules', [ 'rate' => '1' ] )->get_status() === 403 );
+  facr_rest( 'subscriber DELETE /rules/x is 403', facr_rest_call( 'DELETE', '/rules/x' )->get_status() === 403 );
+  facr_rest( 'subscriber POST /rules/bulk is 403', facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'delete', 'ids' => [ 'x' ] ] )->get_status() === 403 );
+  wp_set_current_user( $facr_r_admin );
+
+  $facr_r_bad = facr_rest_call( 'POST', '/rules', [ 'scope_type' => 'affiliate', 'scope_id' => 0, 'target_type' => 'all', 'rate' => '', 'rate_type' => 'percentage' ] );
+  facr_rest( 'invalid rule is 422', $facr_r_bad->get_status() === 422 );
+  facr_rest( '422 carries field errors', isset( $facr_r_bad->get_data()['errors']['scope_id'], $facr_r_bad->get_data()['errors']['rate'] ) );
+  facr_rest( 'nothing was saved on 422', Store::all() === [] );
+
+  $facr_r_arrays = facr_rest_call( 'POST', '/rules', [ 'scope_type' => [ 'affiliate' ], 'scope_id' => [ $facr_r_aff_id ], 'target_type' => 'all', 'rate' => [ '10' ], 'rate_type' => [ 'flat' ], 'note' => [ 'x' ] ] );
+  facr_rest( 'arrays where scalars are expected are rejected, not fatal', $facr_r_arrays->get_status() === 422 && isset( $facr_r_arrays->get_data()['errors']['rate'] ) );
+
+  $facr_r_created = facr_rest_call(
+    'POST',
+    '/rules',
+    [ 'id' => '', 'scope_type' => 'affiliate', 'scope_id' => (string) $facr_r_aff_id, 'target_type' => 'all', 'rate' => 10, 'rate_type' => 'percentage', 'starts_at' => '', 'ends_at' => '2027-09-04', 'note' => 'rest write test', 'status' => 'active', 'created_at' => '2001-01-01T00:00:00+00:00' ]
+  );
+  $facr_r_cd = (array) $facr_r_created->get_data();
+  facr_rest( 'create is 201', $facr_r_created->get_status() === 201 );
+  facr_rest( 'create returns the rule with labels', isset( $facr_r_cd['rule']['id'], $facr_r_cd['rule']['labels']['sentence'] ) );
+  facr_rest( 'create returns a tie list', isset( $facr_r_cd['tie'] ) && is_array( $facr_r_cd['tie'] ) );
+  facr_rest( 'create ignores a client-supplied created_at', ( $facr_r_cd['rule']['created_at'] ?? '' ) !== '2001-01-01T00:00:00+00:00' && ( $facr_r_cd['rule']['created_at'] ?? '' ) !== '' );
+  facr_rest( 'create casts rate to float', ( $facr_r_cd['rule']['rate'] ?? null ) === 10.0 );
+  $facr_r_new_id = (string) ( $facr_r_cd['rule']['id'] ?? '' );
+  facr_rest( 'created rule is in the store', $facr_r_new_id !== '' && Store::get( $facr_r_new_id ) !== null );
+
+  $facr_r_tie = facr_rest_call(
+    'POST',
+    '/rules',
+    [ 'scope_type' => 'affiliate', 'scope_id' => (string) $facr_r_aff_id, 'target_type' => 'all', 'rate' => 11, 'rate_type' => 'percentage', 'status' => 'active', 'note' => 'rest tie test' ]
+  );
+  facr_rest( 'an equally specific rival is reported in tie', in_array( $facr_r_new_id, (array) ( $facr_r_tie->get_data()['tie'] ?? [] ), true ) );
+  Store::delete( (string) ( $facr_r_tie->get_data()['rule']['id'] ?? '' ) );
+
+  $facr_r_stored_created = (string) ( Store::get( $facr_r_new_id )['created_at'] ?? '' );
+  $facr_r_updated = facr_rest_call(
+    'POST',
+    '/rules',
+    [ 'id' => $facr_r_new_id, 'scope_type' => 'affiliate', 'scope_id' => (string) $facr_r_aff_id, 'target_type' => 'all', 'rate' => 12, 'rate_type' => 'percentage', 'note' => 'rest write test edited', 'status' => 'inactive', 'created_at' => '2001-01-01T00:00:00+00:00' ]
+  );
+  facr_rest( 'update is 200', $facr_r_updated->get_status() === 200 );
+  facr_rest( 'update changes the rule in place', count( Store::all() ) === 1 && ( Store::get( $facr_r_new_id )['note'] ?? '' ) === 'rest write test edited' && ( Store::get( $facr_r_new_id )['status'] ?? '' ) === 'inactive' );
+  facr_rest( 'update keeps the stored created_at', ( Store::get( $facr_r_new_id )['created_at'] ?? '' ) === $facr_r_stored_created );
+
+  $facr_r_ro = facr_rest_call( 'POST', '/rules', [ 'id' => 'fluent:0', 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 1, 'rate_type' => 'percentage' ] );
+  facr_rest( 'a fluent: id is refused on save with 403', $facr_r_ro->get_status() === 403 && ( $facr_r_ro->get_data()['code'] ?? '' ) === 'facr_readonly' );
+  $facr_r_gone = facr_rest_call( 'POST', '/rules', [ 'id' => 'facr_does_not_exist', 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 1, 'rate_type' => 'percentage' ] );
+  facr_rest( 'an unknown id is refused on save with 404', $facr_r_gone->get_status() === 404 && ( $facr_r_gone->get_data()['code'] ?? '' ) === 'facr_missing' );
+  facr_rest( 'refused saves wrote nothing', count( Store::all() ) === 1 );
+
+  facr_rest( 'DELETE of a fluent: id is 400', facr_rest_call( 'DELETE', '/rules/fluent:0' )->get_status() === 400 );
+  facr_rest( 'DELETE of an unknown id is 404', facr_rest_call( 'DELETE', '/rules/facr_does_not_exist' )->get_status() === 404 );
+  $facr_r_del = facr_rest_call( 'DELETE', '/rules/' . $facr_r_new_id );
+  facr_rest( 'DELETE of a real rule is 200 and names it', $facr_r_del->get_status() === 200 && ( $facr_r_del->get_data()['deleted'] ?? '' ) === $facr_r_new_id );
+  facr_rest( 'DELETE removed the rule', Store::get( $facr_r_new_id ) === null );
+
+  $facr_r_ids = [];
+  foreach ( [ 'bulk a', 'bulk b', 'bulk c' ] as $facr_r_note ) {
+    [ $facr_r_b ] = Store::validate( [ 'scope_type' => 'affiliate', 'scope_id' => (string) $facr_r_aff_id, 'target_type' => 'all', 'rate' => '5', 'rate_type' => 'percentage', 'status' => 'active', 'note' => $facr_r_note ] );
+    Store::save( $facr_r_b );
+    $facr_r_ids[] = $facr_r_b['id'];
+  }
+  $facr_r_bulk = facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'deactivate', 'ids' => [ $facr_r_ids[0], $facr_r_ids[1], 'fluent:0', [ 'nested' ], 42 ] ] );
+  facr_rest( 'bulk deactivate is 200 with the count', $facr_r_bulk->get_status() === 200 && ( $facr_r_bulk->get_data()['count'] ?? -1 ) === 2 );
+  facr_rest( 'bulk deactivate flipped exactly those two', ( Store::get( $facr_r_ids[0] )['status'] ?? '' ) === 'inactive' && ( Store::get( $facr_r_ids[1] )['status'] ?? '' ) === 'inactive' && ( Store::get( $facr_r_ids[2] )['status'] ?? '' ) === 'active' );
+  facr_rest( 'bulk activate is 200 with the count', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'activate', 'ids' => $facr_r_ids ] )->get_data()['count'] ?? -1 ) === 2 );
+  facr_rest( 'bulk with an unknown action is 400', facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'explode', 'ids' => $facr_r_ids ] )->get_status() === 400 );
+  facr_rest( 'bulk with no usable ids is 200 count 0', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'delete', 'ids' => [ 'fluent:0', 'fluent:renewal:1' ] ] )->get_data()['count'] ?? -1 ) === 0 );
+  facr_rest( 'bulk delete is 200 with the count', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'delete', 'ids' => $facr_r_ids ] )->get_data()['count'] ?? -1 ) === 3 );
+  facr_rest( 'bulk delete emptied the store', Store::all() === [] );
+
+  // --------------------------------------------------- input hardening ---
+  facr_rest( 'scalar() flattens an array to an empty string', \FACommissionRules\Rest\Controller::scalar( [ 'edit' ] ) === '' );
+  facr_rest( 'scalar() passes a scalar through as a string', \FACommissionRules\Rest\Controller::scalar( 42 ) === '42' );
+  facr_rest( 'a sanitiser survives an array-valued field', sanitize_key( \FACommissionRules\Rest\Controller::scalar( [ 'edit' ] ) ) === '' );
 
 } finally {
   wp_set_current_user( $facr_r_prev );
