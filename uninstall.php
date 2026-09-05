@@ -27,7 +27,7 @@ global $wpdb;
 $facr_table = $wpdb->prefix . 'fa_meta';
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall, no cache to keep.
-if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $facr_table ) ) === $facr_table ) {
+if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $facr_table ) ) ) === $facr_table ) {
   // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- ditto.
   $wpdb->delete(
     $facr_table,

@@ -591,7 +591,13 @@
         };
         api( '/rules', { method: 'POST', body: body } ).then( function ( data ) {
           editor.saving = false;
-          notify( 'success', H.sprintf( i18n.rule_saved, data.rule && data.rule.labels ? data.rule.labels.sentence : '' ) );
+          // A 200 with no rule.id is not a save, whatever the body looks like —
+          // never close the drawer or refresh the list on its behalf.
+          if ( ! data || ! data.rule || ! data.rule.id ) {
+            notify( 'error', i18n.error_generic );
+            return;
+          }
+          notify( 'success', H.sprintf( i18n.rule_saved, data.rule.labels ? data.rule.labels.sentence : '' ) );
           if ( data.tie && data.tie.length ) {
             EP.ElMessageBox.alert( i18n.tie_warning, i18n.tie_title, { type: 'warning', confirmButtonText: i18n.confirm_ok } ).catch( function () {} );
           }
@@ -601,6 +607,11 @@
           }
         }, function ( error ) {
           editor.saving = false;
+          // Same guard as the success path: a stale request's errors must not
+          // overwrite a newer editor session's form errors or pop its toast.
+          if ( session !== vm.editorSeq ) {
+            return;
+          }
           if ( error.status === 422 && error.data && error.data.errors ) {
             editor.errors = error.data.errors;
             return;

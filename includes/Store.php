@@ -167,7 +167,13 @@ final class Store {
         ? __( 'Choose at least one product category.', 'fa-commission-rules' )
         : __( 'Choose at least one product or variation.', 'fa-commission-rules' );
     } elseif ( $target_ids ) {
-      $unknown = self::unknown_targets( $target_type, $target_ids );
+      // Without WooCommerce, a category id can only be trusted if it is an
+      // id this exact rule already had saved — never for a new rule or a
+      // newly added id, which would sail through unchecked.
+      $existing_id  = (string) ( $input['id'] ?? '' );
+      $existing     = $existing_id !== '' ? self::get( $existing_id ) : null;
+      $existing_cat = ( $existing && $existing['target_type'] === 'category' ) ? $existing['target_ids'] : [];
+      $unknown      = self::unknown_targets( $target_type, $target_ids, $existing_cat );
       if ( $unknown ) {
         $errors['target_ids'] = sprintf(
           /* translators: %s: comma-separated list of ids that could not be found */
@@ -381,9 +387,13 @@ final class Store {
    * Target ids that do not resolve to something of the declared type.
    *
    * @param int[] $ids
+   * @param int[] $existing_category_ids ids already stored on this same rule
+   *              (only meaningful for $target_type === 'category'); lets a
+   *              category rule be re-saved with WooCommerce deactivated
+   *              without opening the door to a brand-new category id.
    * @return string[] the offending ids
    */
-  private static function unknown_targets( string $target_type, array $ids ): array {
+  private static function unknown_targets( string $target_type, array $ids, array $existing_category_ids = [] ): array {
     $unknown = [];
 
     foreach ( $ids as $id ) {
@@ -391,12 +401,14 @@ final class Store {
         // ponytail: same reasoning as the product branch below — product_cat is
         // registered by WooCommerce, so with WooCommerce deactivated every id
         // would look unknown and an existing category rule could not be re-saved.
+        // But that leniency must not extend past what this rule already had
+        // saved, or a new/edited rule could add unverifiable category ids.
         if ( self::category_taxonomy_available() ) {
           $term = get_term( $id, 'product_cat' );
           if ( ! $term || is_wp_error( $term ) ) {
             $unknown[] = (string) $id;
           }
-        } elseif ( $id <= 0 ) {
+        } elseif ( $id <= 0 || ! in_array( $id, $existing_category_ids, true ) ) {
           $unknown[] = (string) $id;
         }
         continue;

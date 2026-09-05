@@ -60,6 +60,13 @@ test( 'sortRules puts the most specific first, then the newest, without mutating
   assert.deepEqual( input.map( r => r.id ), [ 'a', 'b', 'c' ] );
 } );
 
+test( 'sortRules ranks a microsecond timestamp as newer than a same-second one with no fraction', () => {
+  const whole = rule( { id: 'whole', created_at: '2026-01-01T00:00:00+00:00' } );
+  const micro = rule( { id: 'micro', created_at: '2026-01-01T00:00:00.000123+00:00' } );
+  const sorted = H.sortRules( [ whole, micro ] );
+  assert.deepEqual( sorted.map( r => r.id ), [ 'micro', 'whole' ] );
+} );
+
 test( 'filterRules matches scope, target, status and a case-insensitive query', () => {
   const rules = [
     rule( { id: '1', scope_type: 'affiliate', labels: { scope: 'Affiliate: Jane Doe (#12)', target: 'All products', rate: '10%', window: 'Always', sentence: '' }, note: 'Year-1 deal' } ),

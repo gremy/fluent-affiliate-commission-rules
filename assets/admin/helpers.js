@@ -42,7 +42,12 @@
       if ( byScore !== 0 ) {
         return byScore;
       }
-      return String( b.created_at || '' ).localeCompare( String( a.created_at || '' ) );
+      // Code-point compare, not localeCompare(): PHP's strcmp (used server-side
+      // for the same ordering) is byte-wise, and localeCompare would rank a
+      // microsecond timestamp behind a same-second one with no fraction at all.
+      var ac = String( a.created_at || '' );
+      var bc = String( b.created_at || '' );
+      return ac < bc ? 1 : ( ac > bc ? -1 : 0 );
     } );
   }
 
