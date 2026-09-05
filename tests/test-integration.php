@@ -681,6 +681,59 @@ try {
     strpos( $facr_render_notice( 'readonly' ), esc_html__( "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings.", 'fa-commission-rules' ) ) !== false
   );
 
+
+  // ----------------------------------------------------------- widgets ------
+  [ $facr_wrule ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'rate'        => '10',
+      'rate_type'   => 'percentage',
+      'ends_at'     => '2027-09-14',
+      'status'      => 'active',
+      'note'        => 'widget test',
+    ]
+  );
+  Store::save( $facr_wrule );
+
+  $facr_widgets = apply_filters( 'fluent_affiliate/affiliate_widgets', [], \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ) );
+  facr_it( 'profile widget is added', count( $facr_widgets ) === 1 );
+  facr_it( 'profile widget has the documented keys', isset( $facr_widgets[0]['title'], $facr_widgets[0]['action'], $facr_widgets[0]['content'] ) );
+  facr_it( 'profile widget lists the rule', strpos( (string) $facr_widgets[0]['content'], '10%' ) !== false );
+  facr_it( 'profile widget links a pre-scoped add form', strpos( (string) $facr_widgets[0]['action'], 'affiliate_id=' . $facr_aff_id ) !== false );
+
+  wp_set_current_user( $facr_user_id );
+  $facr_portal = apply_filters( 'fluent_affiliate/portal_notice_html', '' );
+  facr_it( 'portal card mentions the rate', strpos( $facr_portal, '10%' ) !== false );
+  facr_it( 'portal card states the window end date', strpos( $facr_portal, date_i18n( (string) get_option( 'date_format' ), strtotime( '2027-09-14' ) ) ) !== false );
+  facr_it( 'portal card survives wp_kses_post', trim( wp_kses_post( $facr_portal ) ) !== '' );
+  wp_set_current_user( 0 );
+
+  // A rule whose window has closed must not be advertised to the affiliate.
+  [ $facr_expired ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'rate'        => '99',
+      'rate_type'   => 'percentage',
+      'ends_at'     => '2020-01-01',
+      'status'      => 'active',
+      'note'        => 'expired widget test',
+    ]
+  );
+  Store::save( $facr_expired );
+  wp_set_current_user( $facr_user_id );
+  facr_it( 'portal card hides an expired rule', strpos( (string) apply_filters( 'fluent_affiliate/portal_notice_html', '' ), '99%' ) === false );
+  wp_set_current_user( 0 );
+  Store::delete( $facr_expired['id'] );
+
+  Store::delete( $facr_wrule['id'] );
+  wp_set_current_user( $facr_user_id );
+  facr_it( 'portal card is empty with no rules', trim( (string) apply_filters( 'fluent_affiliate/portal_notice_html', '' ) ) === '' );
+  wp_set_current_user( 0 );
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );
