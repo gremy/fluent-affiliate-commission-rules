@@ -294,6 +294,196 @@ try {
     echo "SKIP WooCommerce inactive: term ancestry not exercised\n";
   }
 
+  // ------------------------------------------------------------- hooks ------
+  // Product targeting needs real product ids, so this section only runs with
+  // WooCommerce present; everything above it is WooCommerce-agnostic.
+  if ( ! Fluent::has_woo() || $facr_product_id <= 0 ) {
+    // Everything above this point is WooCommerce-agnostic and has already run.
+    echo "SKIP WooCommerce inactive: referral hooks, labels and widgets not exercised\n";
+    return;
+  }
+
+  // A 10% affiliate rule on product A, nothing on product B.
+  [ $facr_rule ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'product',
+      'target_ids'  => [ (string) $facr_product_id ],
+      'rate'        => '10',
+      'rate_type'   => 'percentage',
+      'status'      => 'active',
+      'note'        => 'hooks test',
+    ]
+  );
+  Store::save( $facr_rule );
+
+  $facr_payload = [
+    'affiliate_id' => $facr_aff_id,
+    'amount'       => 7.5,          // Fluent's own 5% of 150
+    'order_total'  => 150.0,
+    'currency'     => 'USD',
+    'type'         => 'sale',
+    'status'       => 'unpaid',
+    'provider'     => 'woo',
+    'provider_id'  => 0,            // no real order: falls back to the products array
+    'description'  => 'Product A and 1 more items',
+    'products'     => [
+      [ 'item_id' => $facr_product_id, 'title' => 'A', 'subtotal' => 100.0, 'tax' => 0.0, 'total' => 100.0 ],
+      [ 'item_id' => $facr_product_b, 'title' => 'B', 'subtotal' => 50.0, 'tax' => 0.0, 'total' => 50.0 ],
+    ],
+  ];
+
+  $facr_out = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
+  facr_it( 'sale: rule line at 10% plus remainder at the affiliate rate', abs( (float) $facr_out['amount'] - 12.5 ) < 0.001 );
+  facr_it( 'sale: audit stamp is written', isset( $facr_out['settings']['fa_commission_rules']['version'] ) );
+  facr_it( 'sale: stamp records the winning rule', ( $facr_out['settings']['fa_commission_rules']['lines'][0]['rule_id'] ?? '' ) === $facr_rule['id'] );
+  facr_it( 'sale: stamp records the remainder', abs( (float) $facr_out['settings']['fa_commission_rules']['remainder']['total'] - 50.0 ) < 0.001 );
+  facr_it( 'sale: description keeps its original text', strpos( (string) $facr_out['description'], 'Product A and 1 more items' ) === 0 );
+  facr_it( 'sale: description gains a rules note', strpos( (string) $facr_out['description'], 'rules:' ) !== false );
+
+  // recurring_sale must pass through untouched: the renewal hook owns that path.
+  $facr_recurring          = $facr_payload;
+  $facr_recurring['type']  = 'recurring_sale';
+  $facr_out_rec            = apply_filters( 'fluent_affiliate/referral_data', $facr_recurring, 'woo' );
+  facr_it( 'renewal referral_data is untouched', abs( (float) $facr_out_rec['amount'] - 7.5 ) < 0.001 && ! isset( $facr_out_rec['settings']['fa_commission_rules'] ) );
+
+  // lifetime_sale keeps Fluent's own lifetime base on the remainder.
+  if ( Fluent::has_pro() && class_exists( '\FluentAffiliatePro\App\Hooks\Handlers\LifetimeCommissionHandler' ) ) {
+    $facr_lifetime         = $facr_payload;
+    $facr_lifetime['type'] = 'lifetime_sale';
+    $facr_out_life         = apply_filters( 'fluent_affiliate/referral_data', $facr_lifetime, 'woo' );
+    // The lifetime base is taken on the whole order and prorated onto the third
+    // of it no rule claimed — identical to base(50) for a percentage lifetime
+    // rate, and the only correct reading of a flat one.
+    $facr_expected_base = ( new \FluentAffiliatePro\App\Hooks\Handlers\LifetimeCommissionHandler() )
+      ->getBaseLifetimeCommission( \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ), 150.0 ) * ( 50.0 / 150.0 );
+    facr_it( 'lifetime: rule line plus the prorated lifetime base', abs( (float) $facr_out_life['amount'] - round( 10.0 + (float) $facr_expected_base, 2 ) ) < 0.001 );
+  } else {
+    echo "SKIP Fluent Affiliate Pro inactive: lifetime path not exercised\n";
+  }
+
+  // Renewals: Fluent's own amount is scaled onto the remainder.
+  $facr_renewal_ctx = [
+    'affiliate'       => \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ),
+    'order_data'      => [
+      'referral_order_total' => 150.0,
+      'items'                => $facr_payload['products'],
+    ],
+    'provider'        => 'woo',
+    'vendor_order'    => null,
+    'parent_referral' => null,
+  ];
+  $facr_renewal = apply_filters( 'fluent_affiliate/recurring_commission', 7.5, $facr_renewal_ctx );
+  facr_it( 'renewal: float payload stays a float', is_float( $facr_renewal ) || is_int( $facr_renewal ) );
+  facr_it( 'renewal: 10% of the rule line plus the scaled base', abs( (float) $facr_renewal - ( 10.0 + 7.5 * ( 50.0 / 150.0 ) ) ) < 0.001 );
+
+  $facr_renewal_array = apply_filters( 'fluent_affiliate/recurring_commission', [ 'amount' => 7.5, 'rate' => 5 ], $facr_renewal_ctx );
+  facr_it( 'renewal: array payload stays an array', is_array( $facr_renewal_array ) && isset( $facr_renewal_array['amount'] ) );
+  facr_it( 'renewal: array payload keeps its other keys', ( $facr_renewal_array['rate'] ?? null ) === 5 );
+
+  // A group rule applies to every member of the group, whatever the member's own
+  // rate type. Fluent's own group RATE is conditional (it only applies when the
+  // affiliate's rate_type is literally 'group'); our group RULES are not, and
+  // this affiliate carries its own percentage rate.
+  if ( Fluent::has_pro() && $facr_group_id > 0 ) {
+    [ $facr_group_rule ] = Store::validate(
+      [
+        'scope_type'  => 'group',
+        'scope_id'    => (string) $facr_group_id,
+        'target_type' => 'all',
+        'rate'        => '8',
+        'rate_type'   => 'percentage',
+        'status'      => 'active',
+        'note'        => 'group rule test',
+      ]
+    );
+    Store::save( $facr_group_rule );
+    $facr_group_out = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
+    facr_it( 'a group rule applies although the affiliate has its own percentage rate', abs( (float) $facr_group_out['amount'] - 14.0 ) < 0.001 );
+    Store::delete( $facr_group_rule['id'] );
+  } else {
+    echo "SKIP Fluent Affiliate Pro inactive: group rule not exercised\n";
+  }
+
+  // A foreign provider's item ids are not WooCommerce product ids, so a product
+  // or category rule must never be allowed to claim one of its lines.
+  $facr_foreign_out = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'fluent_cart' );
+  facr_it( 'a product rule never fires for a foreign provider', abs( (float) $facr_foreign_out['amount'] - 7.5 ) < 0.001 );
+
+  [ $facr_all_rule ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'rate'        => '20',
+      'rate_type'   => 'percentage',
+      'status'      => 'active',
+      'note'        => 'foreign provider test',
+    ]
+  );
+  Store::save( $facr_all_rule );
+  $facr_foreign_out = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'fluent_cart' );
+  facr_it( 'an all-products rule still fires for a foreign provider', abs( (float) $facr_foreign_out['amount'] - 30.0 ) < 0.001 );
+
+  // An items-less payload must still be priced by an all-products rule.
+  $facr_no_items             = $facr_payload;
+  $facr_no_items['products'] = [];
+  $facr_no_items_out         = apply_filters( 'fluent_affiliate/referral_data', $facr_no_items, 'woo' );
+  facr_it( 'an items-less payload is still priced', abs( (float) $facr_no_items_out['amount'] - 30.0 ) < 0.001 );
+  facr_it( 'the synthetic line is stamped like any other', ( $facr_no_items_out['settings']['fa_commission_rules']['lines'][0]['rule_id'] ?? '' ) === $facr_all_rule['id'] );
+
+  Store::delete( $facr_all_rule['id'] );
+
+  // A flat base rate is a per-order figure. Asking Fluent for it again on the
+  // remainder would pay the whole flat amount a second time.
+  \FluentAffiliate\App\Models\Affiliate::where( 'id', $facr_aff_id )->update( [ 'rate_type' => 'flat', 'rate' => 50 ] );
+  $facr_flat_out = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
+  facr_it( 'flat base: the rule line plus the prorated flat share', abs( (float) $facr_flat_out['amount'] - 26.67 ) < 0.001 );
+
+  [ $facr_flat_all ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'rate'        => '10',
+      'rate_type'   => 'percentage',
+      'status'      => 'active',
+      'note'        => 'flat base test',
+    ]
+  );
+  Store::save( $facr_flat_all );
+  $facr_flat_full = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
+  facr_it( 'flat base: a fully matched order pays no flat amount at all', abs( (float) $facr_flat_full['amount'] - 15.0 ) < 0.001 );
+  Store::delete( $facr_flat_all['id'] );
+  \FluentAffiliate\App\Models\Affiliate::where( 'id', $facr_aff_id )->update( [ 'rate_type' => 'percentage', 'rate' => 5 ] );
+
+  // A deliberate 0% rule has to record a referral. Fluent silently drops
+  // zero-amount sale referrals unless the ignore filter is told not to.
+  Store::delete( $facr_rule['id'] );
+  [ $facr_zero_rule ] = Store::validate(
+    [
+      'scope_type'  => 'affiliate',
+      'scope_id'    => (string) $facr_aff_id,
+      'target_type' => 'all',
+      'rate'        => '0',
+      'rate_type'   => 'percentage',
+      'status'      => 'active',
+      'note'        => 'zero rate test',
+    ]
+  );
+  Store::save( $facr_zero_rule );
+  $facr_zero_out = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
+  facr_it( 'a 0% rule zeroes the amount', abs( (float) $facr_zero_out['amount'] ) < 0.001 );
+  facr_it( 'a 0% rule is not discarded as a zero-amount referral', apply_filters( 'fluent_affiliate/ignore_zero_amount_referral', true, $facr_zero_out ) === false );
+  facr_it( 'a referral we never touched is still discarded when zero', apply_filters( 'fluent_affiliate/ignore_zero_amount_referral', true, $facr_payload ) === true );
+  Store::delete( $facr_zero_rule['id'] );
+
+  // An affiliate with no rules is never touched.
+  $facr_untouched = apply_filters( 'fluent_affiliate/referral_data', $facr_payload, 'woo' );
+  facr_it( 'no rules means no change to the amount', abs( (float) $facr_untouched['amount'] - 7.5 ) < 0.001 );
+  facr_it( 'no rules means no audit stamp', ! isset( $facr_untouched['settings']['fa_commission_rules'] ) );
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );
