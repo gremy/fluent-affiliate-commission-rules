@@ -162,8 +162,13 @@ JS;
       // position:0 layer with no such opinion, so it renders under the admin
       // bar and hides the drawer's title/close button. Push the overlay down
       // to clear the admin bar on our page only.
-      'body.toplevel_page_fluent-affiliate .el-overlay{top:32px}'
-      . '@media screen and (max-width:782px){body.toplevel_page_fluent-affiliate .el-overlay{top:46px}}'
+      // Element Plus also sets bottom:0 and height:100% on .el-overlay, which
+      // overconstrains top+bottom+height; the box then extends 32px/46px past
+      // the viewport instead of shrinking, clipping the drawer footer. Pair
+      // each top offset with a matching height so the box still ends flush
+      // with the viewport bottom.
+      'body.toplevel_page_fluent-affiliate .el-overlay{top:32px;height:calc(100% - 32px)}'
+      . '@media screen and (max-width:782px){body.toplevel_page_fluent-affiliate .el-overlay{top:46px;height:calc(100% - 46px)}}'
       . '.facr-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'
       . '.facr-bulk-bar{border-top:1px solid var(--fla-primary-border);padding-top:12px;padding-bottom:12px}'
       . '.facr-badge-note,.facr-readonly,.facr-help{font-size:12px;color:var(--fla-secondary-text);line-height:1.4}'
