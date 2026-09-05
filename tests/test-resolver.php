@@ -265,6 +265,33 @@ $out   = Resolver::resolve( $ctx, 80.0, [ facr_line( 44, 80.0, [], 999 ) ], $rul
 facr_rt( 'a parent-product rule matches a variation of that product', $out['lines'][0]['rule_id'] === 'parent' );
 facr_rt( 'the parent rule rate is applied to the variation line', abs( $out['amount'] - 14.4 ) < 0.001 );
 
+// 20. effective(): one rule per distinct target, same specificity order as
+// order-line resolution — the portal/admin-card fix. An affiliate's own
+// "all products" rule beats their group's "all products" rule outright
+// (only the own rule ever pays), but rules on different targets both survive.
+$rules = [
+  facr_rule( [ 'id' => 'own-all', 'scope_type' => 'affiliate', 'scope_id' => 7, 'target_type' => 'all', 'rate' => 15.0 ] ),
+  facr_rule( [ 'id' => 'grp-all', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'all', 'rate' => 10.0 ] ),
+];
+$eff = Resolver::effective( $rules, $ctx, $now );
+facr_rt( 'effective(): own all-products rule wins over the group all-products rule', count( $eff ) === 1 && $eff[0]['id'] === 'own-all' );
+
+$rules = [
+  facr_rule( [ 'id' => 'own-prod', 'scope_type' => 'affiliate', 'scope_id' => 7, 'target_type' => 'product', 'target_ids' => [ 44 ], 'rate' => 12.0 ] ),
+  facr_rule( [ 'id' => 'grp-prod', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'product', 'target_ids' => [ 44 ], 'rate' => 9.0 ] ),
+];
+$eff = Resolver::effective( $rules, $ctx, $now );
+facr_rt( 'effective(): own product rule wins over a group rule on the same product', count( $eff ) === 1 && $eff[0]['id'] === 'own-prod' );
+
+$rules = [
+  facr_rule( [ 'id' => 'grp-cat', 'scope_type' => 'group', 'scope_id' => 3, 'target_type' => 'category', 'target_ids' => [ 12 ], 'rate' => 8.0 ] ),
+  facr_rule( [ 'id' => 'own-all', 'scope_type' => 'affiliate', 'scope_id' => 7, 'target_type' => 'all', 'rate' => 15.0 ] ),
+];
+$eff     = Resolver::effective( $rules, $ctx, $now );
+$eff_ids = array_map( static fn( array $r ): string => (string) $r['id'], $eff );
+sort( $eff_ids );
+facr_rt( 'effective(): rules on different targets are both kept', $eff_ids === [ 'grp-cat', 'own-all' ] );
+
 echo $GLOBALS['facr_res_fail'] ? "\n{$GLOBALS['facr_res_fail']} FAILURES\n" : "\nAll resolver checks passed\n";
 if ( PHP_SAPI === 'cli' && ! defined( 'WP_CLI' ) ) {
   exit( $GLOBALS['facr_res_fail'] ? 1 : 0 );

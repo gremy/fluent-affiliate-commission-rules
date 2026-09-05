@@ -15,6 +15,11 @@ use FACommissionRules\Store;
  * commission rate nowhere today, which is the single biggest source of partner
  * disputes on a time-boxed rate.
  *
+ * Both surfaces show one rule per distinct target: an affiliate with an own
+ * "all products 15%" rule and a group "all products 10%" rule only ever gets
+ * paid on the own rule, so that is the only one advertised. Resolver::effective()
+ * does the collapsing with the same specificity order that decides real money.
+ *
  * @package FACommissionRules
  */
 final class Widgets {
@@ -24,7 +29,10 @@ final class Widgets {
   }
 
   /**
-   * Rules that can apply to this affiliate: their own plus their group's, active first.
+   * Every rule that could ever apply to this affiliate: their own, their
+   * group's, the plugin's own "everyone" rules, and Fluent's own global rows.
+   * Resolver::applicable()/effective() do the status/date/scope filtering and
+   * the per-target collapsing; this just gathers the candidates.
    *
    * @return array<int,array<string,mixed>>
    */
@@ -33,11 +41,24 @@ final class Widgets {
     if ( $group_id > 0 ) {
       $rules = array_merge( $rules, Store::for_scope( 'group', $group_id ) );
     }
+    $rules = array_merge( $rules, Store::for_scope( 'all', 0 ), Store::fluent_global_rules( 'sale' ) );
     usort(
       $rules,
       static fn( array $a, array $b ): int => ( $b['status'] === 'active' ? 1 : 0 ) <=> ( $a['status'] === 'active' ? 1 : 0 )
     );
     return $rules;
+  }
+
+  /** Individual / Group / Everyone — the source column, plain language throughout. */
+  private static function source_label( array $rule ): string {
+    switch ( (string) ( $rule['scope_type'] ?? 'all' ) ) {
+      case 'affiliate':
+        return __( 'Individual', 'fa-commission-rules' );
+      case 'group':
+        return __( 'Group', 'fa-commission-rules' );
+      default:
+        return __( 'Everyone', 'fa-commission-rules' );
+    }
   }
 
   /**
@@ -51,7 +72,12 @@ final class Widgets {
     }
 
     $affiliate_id = (int) $affiliate->id;
-    $rules        = self::rules_for_affiliate( $affiliate_id, (int) ( $affiliate->group_id ?? 0 ) );
+    $group_id     = (int) ( $affiliate->group_id ?? 0 );
+    $rules        = Resolver::effective(
+      self::rules_for_affiliate( $affiliate_id, $group_id ),
+      [ 'affiliate_id' => $affiliate_id, 'group_id' => $group_id ],
+      current_time( 'Y-m-d' )
+    );
 
     $rows = '';
     foreach ( $rules as $rule ) {
@@ -60,7 +86,7 @@ final class Widgets {
         esc_html( RulesPage::target_label( $rule ) ),
         esc_html( RulesPage::rate_label( $rule ) ),
         esc_html( RulesPage::window_label( $rule ) ),
-        esc_html( $rule['scope_type'] === 'affiliate' ? __( 'Individual', 'fa-commission-rules' ) : __( 'Group', 'fa-commission-rules' ) )
+        esc_html( self::source_label( $rule ) )
       );
     }
 
@@ -74,7 +100,7 @@ final class Widgets {
       : '<p>' . esc_html__( 'No commission rules apply to this affiliate. They earn the inherited rate.', 'fa-commission-rules' ) . '</p>';
 
     $widgets[] = [
-      'title'   => __( 'Commission rules', 'fa-commission-rules' ),
+      'title'   => esc_html__( 'Commission rules', 'fa-commission-rules' ),
       'action'  => sprintf(
         '<a href="%s" target="_blank" rel="noopener">%s</a>',
         esc_url( Menu::page_url( [ 'action' => 'add', 'affiliate_id' => (string) $affiliate_id ] ) ),
@@ -97,11 +123,14 @@ final class Widgets {
       return $html;
     }
 
-    // The same filter the money uses: status, date window and scope together.
-    // Telling an affiliate they earn 10% on a rule that expired last month is
-    // exactly the dispute this card exists to prevent.
+    // The same filter the money uses: status, date window and scope together,
+    // collapsed to one rule per target so a rule that never pays (shadowed by
+    // a more specific one of the affiliate's own) is never advertised.
+    // Telling an affiliate they earn 10% on a rule that expired last month, or
+    // showing two contradictory rates for the same products, is exactly the
+    // dispute this card exists to prevent.
     $group_id = (int) ( $affiliate->group_id ?? 0 );
-    $rules    = Resolver::applicable(
+    $rules    = Resolver::effective(
       self::rules_for_affiliate( (int) $affiliate->id, $group_id ),
       [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => $group_id ],
       current_time( 'Y-m-d' )

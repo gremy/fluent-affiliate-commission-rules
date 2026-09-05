@@ -734,6 +734,62 @@ try {
   facr_it( 'portal card is empty with no rules', trim( (string) apply_filters( 'fluent_affiliate/portal_notice_html', '' ) ) === '' );
   wp_set_current_user( 0 );
 
+  // Fix round 1: rules from other sources (group, everyone) must reach the
+  // admin card with the right Source label, since rules_for_affiliate() now
+  // merges them in and Resolver::effective() collapses per target.
+  if ( Fluent::has_pro() && $facr_group_id > 0 ) {
+    [ $facr_widget_group_rule ] = Store::validate(
+      [
+        'scope_type'  => 'group',
+        'scope_id'    => (string) $facr_group_id,
+        'target_type' => 'category',
+        'target_ids'  => [ $facr_cat_child ],
+        'rate'        => '7',
+        'rate_type'   => 'percentage',
+        'status'      => 'active',
+        'note'        => 'widget group test',
+      ]
+    );
+    Store::save( $facr_widget_group_rule );
+
+    $facr_group_widgets = apply_filters( 'fluent_affiliate/affiliate_widgets', [], \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ) );
+    $facr_group_content = (string) ( $facr_group_widgets[0]['content'] ?? '' );
+    facr_it(
+      'admin card shows a group rule with Source Group',
+      strpos( $facr_group_content, '7%' ) !== false && strpos( $facr_group_content, __( 'Group', 'fa-commission-rules' ) ) !== false
+    );
+
+    Store::delete( $facr_widget_group_rule['id'] );
+  } else {
+    echo "SKIP Fluent Affiliate Pro inactive: widget group rule not exercised\n";
+  }
+
+  if ( $facr_product_b > 0 ) {
+    [ $facr_everyone_rule ] = Store::validate(
+      [
+        'scope_type'  => 'all',
+        'target_type' => 'product',
+        'target_ids'  => [ $facr_product_b ],
+        'rate'        => '6',
+        'rate_type'   => 'percentage',
+        'status'      => 'active',
+        'note'        => 'widget everyone test',
+      ]
+    );
+    Store::save( $facr_everyone_rule );
+
+    $facr_everyone_widgets = apply_filters( 'fluent_affiliate/affiliate_widgets', [], \FluentAffiliate\App\Models\Affiliate::find( $facr_aff_id ) );
+    $facr_everyone_content = (string) ( $facr_everyone_widgets[0]['content'] ?? '' );
+    facr_it(
+      'admin card shows an Everyone rule when nothing more specific targets the same product',
+      strpos( $facr_everyone_content, '6%' ) !== false && strpos( $facr_everyone_content, __( 'Everyone', 'fa-commission-rules' ) ) !== false
+    );
+
+    Store::delete( $facr_everyone_rule['id'] );
+  } else {
+    echo "SKIP WooCommerce inactive: widget Everyone rule not exercised\n";
+  }
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );

@@ -135,6 +135,63 @@ final class Resolver {
     ];
   }
 
+  /**
+   * From applicable()'s output, the single rule that would actually be
+   * advertised to an affiliate per distinct target — the same specificity
+   * order that decides real money on an order line (scope affiliate > group >
+   * all), so an "own all-products 15%" rule and a "group all-products 10%"
+   * rule never both get shown as if they stack. Target rank never enters the
+   * tie-break here: a key already groups rules by identical target, so within
+   * a key every candidate has the same target specificity.
+   *
+   * @param array<int,array<string,mixed>> $rules
+   * @param array{affiliate_id:int,group_id:int} $context
+   * @param string $now Y-m-d
+   * @return array<int,array<string,mixed>>
+   */
+  public static function effective( array $rules, array $context, string $now ): array {
+    $scope_rank = [ 'affiliate' => 3, 'group' => 2, 'all' => 1 ];
+    $winners    = [];
+
+    foreach ( self::applicable( $rules, $context, $now ) as $idx => $rule ) {
+      $key     = self::target_key( $rule );
+      $rank    = $scope_rank[ (string) ( $rule['scope_type'] ?? 'all' ) ] ?? 1;
+      $created = (string) ( $rule['created_at'] ?? '' );
+
+      if ( ! isset( $winners[ $key ] ) ) {
+        $winners[ $key ] = [ 'rule' => $rule, 'rank' => $rank, 'created_at' => $created, 'idx' => $idx ];
+        continue;
+      }
+
+      $current = $winners[ $key ];
+      $better  = $rank > $current['rank']
+        || ( $rank === $current['rank'] && strcmp( $created, $current['created_at'] ) > 0 )
+        || ( $rank === $current['rank'] && $created === $current['created_at'] && $idx < $current['idx'] );
+
+      if ( $better ) {
+        $winners[ $key ] = [ 'rule' => $rule, 'rank' => $rank, 'created_at' => $created, 'idx' => $idx ];
+      }
+    }
+
+    return array_values( array_map( static fn( array $winner ): array => $winner['rule'], $winners ) );
+  }
+
+  /**
+   * target_type plus its sorted target ids — 'all' is always one key,
+   * regardless of scope, so a "15%" and a "10%" rule both covering all
+   * products collapse to the same slot.
+   *
+   * @param array<string,mixed> $rule
+   */
+  private static function target_key( array $rule ): string {
+    if ( (string) ( $rule['target_type'] ?? 'all' ) === 'all' ) {
+      return 'all';
+    }
+    $ids = array_map( 'intval', (array) ( $rule['target_ids'] ?? [] ) );
+    sort( $ids );
+    return (string) $rule['target_type'] . ':' . implode( ',', $ids );
+  }
+
   public static function line_commission( float $total, float $rate, string $rate_type ): float {
     $commission = $rate_type === 'percentage' ? ( $total * $rate ) / 100 : $rate;
     return $commission < 0 ? 0.0 : $commission;
