@@ -181,6 +181,9 @@ JS;
       . '.facr-money,.facr-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}'
       . '.fa_table_wrap{overflow-x:auto}'
       . '.facr-row--editable{cursor:pointer}'
+      . '.facr-dots{font-size:20px;line-height:1;padding:4px 8px;cursor:pointer;color:var(--el-text-color-regular)}'
+      . '.facr-dots:hover{color:var(--el-color-primary)}'
+      . '.facr-lock{color:var(--el-text-color-placeholder)}'
       . '@media (max-width:640px){.fa-affiliate-body-actions-bar{flex-direction:column;align-items:stretch;gap:12px}.facr-filters .el-select,.facr-filters .el-input{width:100%!important}}'
       . '.fa-navbar__link-wrapper[data-key="fa_commission_rules"] .fa-navbar__link{white-space:nowrap}'
       // Fluent's own dark theme repoints Element Plus's --el-color-primary at

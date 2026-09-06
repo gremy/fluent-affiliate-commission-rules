@@ -160,15 +160,33 @@
     '          </template>',
     '        </el-table-column>',
     '        <el-table-column :label="i18n.col_note" prop="note" min-width="140" show-overflow-tooltip></el-table-column>',
-    '        <el-table-column :label="i18n.col_actions" width="130" align="right" fixed="right" class-name="facr-col-actions">',
+    '        <el-table-column :label="isNarrow ? \'\' : i18n.col_actions" :width="isNarrow ? 56 : 130" align="right" fixed="right" class-name="facr-col-actions">',
     '          <template #default="{ row }">',
-    '            <template v-if="!row.readonly">',
-    '              <el-button link type="primary" size="small" @click="openEditor(row)">{{ i18n.edit }}</el-button>',
-    '              <el-button link type="danger" size="small" @click="remove(row)">{{ i18n.delete }}</el-button>',
+    '            <template v-if="isNarrow">',
+    '              <el-dropdown v-if="!row.readonly" trigger="click" @command="onRowCommand">',
+    '                <span class="facr-dots" role="button" :aria-label="i18n.actions_menu">⋯</span>',
+    '                <template #dropdown>',
+    '                  <el-dropdown-menu>',
+    '                    <el-dropdown-item :command="{ action: \'edit\', row: row }">{{ i18n.edit }}</el-dropdown-item>',
+    '                    <el-dropdown-item :command="{ action: \'toggle\', row: row }">{{ row.status === \'active\' ? i18n.deactivate : i18n.activate }}</el-dropdown-item>',
+    '                    <el-dropdown-item :command="{ action: \'delete\', row: row }" style="color:var(--el-color-danger)">{{ i18n.delete }}</el-dropdown-item>',
+    '                  </el-dropdown-menu>',
+    '                </template>',
+    '              </el-dropdown>',
+    '              <svg v-else class="facr-lock" width="16" height="16" viewBox="0 0 16 16" role="img" :aria-label="i18n.readonly_hint" :title="i18n.readonly_hint">',
+    '                <title>{{ i18n.readonly_hint }}</title>',
+    '                <path fill="currentColor" d="M8 1a3 3 0 0 0-3 3v2H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1V4a3 3 0 0 0-3-3zm0 1.5A1.5 1.5 0 0 1 9.5 4v2h-3V4A1.5 1.5 0 0 1 8 2.5zM5.5 7.5h5v5h-5v-5z"></path>',
+    '              </svg>',
     '            </template>',
-    '            <el-tooltip v-else :content="i18n.readonly_hint" placement="top">',
-    '              <span class="facr-readonly">{{ i18n.readonly_short }}</span>',
-    '            </el-tooltip>',
+    '            <template v-else>',
+    '              <template v-if="!row.readonly">',
+    '                <el-button link type="primary" size="small" @click="openEditor(row)">{{ i18n.edit }}</el-button>',
+    '                <el-button link type="danger" size="small" @click="remove(row)">{{ i18n.delete }}</el-button>',
+    '              </template>',
+    '              <el-tooltip v-else :content="i18n.readonly_hint" placement="top">',
+    '                <span class="facr-readonly">{{ i18n.readonly_short }}</span>',
+    '              </el-tooltip>',
+    '            </template>',
     '          </template>',
     '        </el-table-column>',
     '      </el-table>',
@@ -256,6 +274,7 @@
         i18n: i18n,
         loading: true,
         loadError: '',
+        isNarrow: false,
         productSearchSeq: 0,
         editorSeq: 0,
         rules: [],
@@ -347,6 +366,18 @@
     created: function () {
       var vm     = this;
       var params = new URLSearchParams( window.location.search );
+      // Sticky Actions column collapses to a three-dot menu under Fluent's own
+      // 782px admin breakpoint; addListener is the fallback for older WebViews.
+      var narrowQuery = window.matchMedia( '(max-width: 782px)' );
+      var onNarrowChange = function ( event ) {
+        vm.isNarrow = event.matches;
+      };
+      vm.isNarrow = narrowQuery.matches;
+      if ( narrowQuery.addEventListener ) {
+        narrowQuery.addEventListener( 'change', onNarrowChange );
+      } else if ( narrowQuery.addListener ) {
+        narrowQuery.addListener( onNarrowChange );
+      }
       vm.load();
       vm.loadOptions().then( function () {
         // ?action=add&affiliate_id=N from the affiliate profile card: open the
@@ -415,10 +446,30 @@
           return;
         }
         var target = event && event.target;
-        if ( target && target.closest && target.closest( 'button, a, input, .el-checkbox' ) ) {
+        if ( target && target.closest && target.closest( 'button, a, input, .el-checkbox, .facr-dots, .el-dropdown, .el-dropdown-menu' ) ) {
           return;
         }
         this.openEditor( row );
+      },
+      /** The mobile three-dot menu: same actions as the desktop Edit/Delete links, plus a quick status flip. */
+      onRowCommand: function ( command ) {
+        var vm  = this;
+        var row = command.row;
+        if ( command.action === 'edit' ) {
+          vm.openEditor( row );
+          return;
+        }
+        if ( command.action === 'delete' ) {
+          vm.remove( row );
+          return;
+        }
+        var action = row.status === 'active' ? 'deactivate' : 'activate';
+        api( '/rules/bulk', { method: 'POST', body: { action: action, ids: [ row.id ] } } ).then( function ( data ) {
+          notify( 'success', data.message || i18n.bulk_done );
+          vm.load();
+        }, function ( error ) {
+          notify( 'error', error.message );
+        } );
       },
       badge: function ( row ) {
         return H.badgeFor( row, this.shadow, this.tie, this.byId, i18n );

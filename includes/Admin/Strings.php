@@ -43,6 +43,7 @@ final class Strings {
       'col_status'           => __( 'Status', 'fa-commission-rules' ),
       'col_note'             => __( 'Note', 'fa-commission-rules' ),
       'col_actions'          => __( 'Actions', 'fa-commission-rules' ),
+      'actions_menu'         => __( 'Row actions', 'fa-commission-rules' ),
       'status_global'        => __( 'Global (Fluent)', 'fa-commission-rules' ),
       'status_inactive'      => __( 'Inactive', 'fa-commission-rules' ),
       'status_effective'     => __( 'Effective', 'fa-commission-rules' ),

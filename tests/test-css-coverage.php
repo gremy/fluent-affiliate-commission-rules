@@ -43,8 +43,10 @@ if ( ! is_readable( $facr_fluent ) || ! is_readable( $facr_theme ) ) {
 
   // Tags that render under a different root class than their own name.
   $facr_alias = [
-    'el-table-column' => 'el-table',
-    'el-option'       => 'el-select-dropdown',
+    'el-table-column'   => 'el-table',
+    'el-option'         => 'el-select-dropdown',
+    'el-dropdown-menu'  => 'el-dropdown-menu',
+    'el-dropdown-item'  => 'el-dropdown-menu__item',
   ];
 
   preg_match_all( '/<el-([a-z-]+)/', $facr_app, $facr_m );
