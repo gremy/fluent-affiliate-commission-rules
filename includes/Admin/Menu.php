@@ -182,6 +182,18 @@ JS;
       . '.fa_table_wrap{overflow-x:auto}'
       . '.facr-row--editable{cursor:pointer}'
       . '@media (max-width:640px){.fa-affiliate-body-actions-bar{flex-direction:column;align-items:stretch;gap:12px}.facr-filters .el-select,.facr-filters .el-input{width:100%!important}}'
-      . '.fa-navbar__link-wrapper[data-key="fa_commission_rules"] .fa-navbar__link{white-space:nowrap}';
+      . '.fa-navbar__link-wrapper[data-key="fa_commission_rules"] .fa-navbar__link{white-space:nowrap}'
+      // Fluent's own dark theme repoints Element Plus's --el-color-primary at
+      // their near-white brand colour (#F0F3F5) but never uses type="primary"
+      // itself (their own CTAs use a separate .fa_primary_button class with
+      // explicit dark text), so Element Plus's stock white button-text colour
+      // was never exercised against it. Our Vue app does use type="primary"
+      // (Add rule, Save rule, and the delete ElMessageBox's confirm button),
+      // which inherits that white-on-near-white pairing and becomes
+      // unreadable. Mirror Fluent's own fa_primary_button pairing instead —
+      // scoped off the is-link/is-plain/is-text primary variants (the row
+      // "Edit" action among them), which already carry their own readable
+      // near-white-on-transparent pairing that this must not clobber.
+      . 'html.dark body.toplevel_page_fluent-affiliate .el-button--primary:not(.is-link):not(.is-plain):not(.is-text){--el-button-text-color:var(--fla-primary-bg,#151d26);--el-button-bg-color:var(--fla-primary-button,#fff);--el-button-border-color:var(--fla-primary-button,#fff);--el-button-hover-text-color:var(--fla-primary-bg,#151d26);--el-button-hover-bg-color:var(--fla-primary-button,#fff);--el-button-hover-border-color:var(--fla-primary-button,#fff);--el-button-active-text-color:var(--fla-primary-bg,#151d26);--el-button-active-bg-color:var(--fla-primary-button,#fff);--el-button-active-border-color:var(--fla-primary-button,#fff);--el-button-disabled-text-color:var(--fla-primary-bg,#151d26);--el-button-disabled-bg-color:var(--fla-primary-button,#fff);--el-button-disabled-border-color:var(--fla-primary-button,#fff)}';
   }
 }
