@@ -147,20 +147,20 @@
     '      </el-empty>',
     '    </div>',
     '    <div class="fa_table_wrap" v-else>',
-    '      <el-table :data="visibleRules" row-key="id" :empty-text="i18n.no_match" @selection-change="onSelect" style="width:100%">',
+    '      <el-table :data="visibleRules" row-key="id" :empty-text="i18n.no_match" :row-class-name="rowClassName" @selection-change="onSelect" @row-click="onRowClick" style="width:100%">',
     '        <el-table-column type="selection" width="44" :selectable="selectable"></el-table-column>',
-    '        <el-table-column :label="i18n.col_who" prop="labels.scope" min-width="180"></el-table-column>',
-    '        <el-table-column :label="i18n.col_what" prop="labels.target" min-width="200"></el-table-column>',
-    '        <el-table-column :label="i18n.col_rate" prop="labels.rate" width="110"></el-table-column>',
-    '        <el-table-column :label="i18n.col_window" prop="labels.window" min-width="150"></el-table-column>',
-    '        <el-table-column :label="i18n.col_status" min-width="220">',
+    '        <el-table-column :label="i18n.col_who" prop="labels.scope" min-width="140"></el-table-column>',
+    '        <el-table-column :label="i18n.col_what" prop="labels.target" min-width="160"></el-table-column>',
+    '        <el-table-column :label="i18n.col_rate" prop="labels.rate" width="90"></el-table-column>',
+    '        <el-table-column :label="i18n.col_window" prop="labels.window" min-width="130"></el-table-column>',
+    '        <el-table-column :label="i18n.col_status" min-width="170">',
     '          <template #default="{ row }">',
     '            <span class="fa_badge" :class="statusClass(row)">{{ statusText(row) }}</span>',
     '            <div v-if="badge(row).kind" class="facr-badge-note">{{ badge(row).text }}</div>',
     '          </template>',
     '        </el-table-column>',
-    '        <el-table-column :label="i18n.col_note" prop="note" min-width="160"></el-table-column>',
-    '        <el-table-column :label="i18n.col_actions" width="150" align="right">',
+    '        <el-table-column :label="i18n.col_note" prop="note" min-width="140" show-overflow-tooltip></el-table-column>',
+    '        <el-table-column :label="i18n.col_actions" width="130" align="right" fixed="right" class-name="facr-col-actions">',
     '          <template #default="{ row }">',
     '            <template v-if="!row.readonly">',
     '              <el-button link type="primary" size="small" @click="openEditor(row)">{{ i18n.edit }}</el-button>',
@@ -402,6 +402,23 @@
         this.selected = rows.filter( function ( row ) {
           return ! row.readonly;
         } );
+      },
+      rowClassName: function ( data ) {
+        return data.row.readonly ? '' : 'facr-row--editable';
+      },
+      /** Click-to-edit: ignore the selection checkbox, the actions column, and any interactive control inside a cell. */
+      onRowClick: function ( row, column, event ) {
+        if ( row.readonly ) {
+          return;
+        }
+        if ( column && ( column.type === 'selection' || ( column.className || '' ).indexOf( 'facr-col-actions' ) !== -1 ) ) {
+          return;
+        }
+        var target = event && event.target;
+        if ( target && target.closest && target.closest( 'button, a, input, .el-checkbox' ) ) {
+          return;
+        }
+        this.openEditor( row );
       },
       badge: function ( row ) {
         return H.badgeFor( row, this.shadow, this.tie, this.byId, i18n );
