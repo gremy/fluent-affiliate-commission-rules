@@ -183,6 +183,22 @@ JS;
       // (.disabled_row .el-checkbox__original{opacity:0}), just scoped to our page;
       // the "body." prefix matches wp-admin's element-level specificity so this wins.
       . 'body.toplevel_page_fluent-affiliate .el-checkbox__original{opacity:0}'
+      // Read-only rows (Fluent's own global rate rows) are never selectable, so
+      // their row checkbox renders as a disabled Element Plus box that can
+      // never be used. Hide it outright rather than just fixing its opacity;
+      // visibility (not display:none) keeps the table cell's width so
+      // selectable rows' checkboxes stay aligned.
+      . 'body.toplevel_page_fluent-affiliate .el-table .el-checkbox.is-disabled{visibility:hidden}'
+      // Element Plus's own header select-all checkbox only auto-disables when
+      // the table has zero rows (renderHeader() checks data.length===0) — it
+      // never looks at each row's :selectable, so on a page where every row is
+      // read-only it renders fully enabled and clickable. Clicking it does
+      // nothing (toggleAllSelection respects :selectable and selects none) but
+      // still flips the box to "checked", which is a dead, misleading control.
+      // :has() lets pure CSS reach a case that needs cross-row information: hide
+      // the header checkbox only when the table has no non-disabled row
+      // checkbox left to select.
+      . 'body.toplevel_page_fluent-affiliate .el-table:not(:has(tbody .el-checkbox:not(.is-disabled))) thead .el-checkbox{visibility:hidden}'
       . '.facr-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'
       . '.facr-bulk-bar{border-top:1px solid var(--fla-primary-border);padding-top:12px;padding-bottom:12px}'
       . '.facr-badge-note,.facr-readonly,.facr-help{font-size:12px;color:var(--fla-secondary-text);line-height:1.4}'
