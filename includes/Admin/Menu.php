@@ -172,6 +172,17 @@ JS;
       // with the viewport bottom.
       'body.toplevel_page_fluent-affiliate .el-overlay{top:32px;height:calc(100% - 32px)}'
       . '@media screen and (max-width:782px){body.toplevel_page_fluent-affiliate .el-overlay{top:46px;height:calc(100% - 46px)}}'
+      // WP admin's core input[type="checkbox"]:disabled rule (wp-admin/css/forms.css)
+      // sets opacity:0.7 at specificity (0,2,1), tying our disabled el-table row
+      // checkboxes' native input at the same specificity as Element Plus's own
+      // .el-checkbox__original{opacity:0} — and beating it via source order, since
+      // wp-admin's stylesheet loads before this inline style. That makes the hidden
+      // native checkbox reappear behind Element Plus's drawn box (the reported
+      // doubled/offset square), worst on Fluent's read-only global rate rows. Same
+      // fix Fluent's own admin.css already applies to their disabled settings rows
+      // (.disabled_row .el-checkbox__original{opacity:0}), just scoped to our page;
+      // the "body." prefix matches wp-admin's element-level specificity so this wins.
+      . 'body.toplevel_page_fluent-affiliate .el-checkbox__original{opacity:0}'
       . '.facr-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'
       . '.facr-bulk-bar{border-top:1px solid var(--fla-primary-border);padding-top:12px;padding-bottom:12px}'
       . '.facr-badge-note,.facr-readonly,.facr-help{font-size:12px;color:var(--fla-secondary-text);line-height:1.4}'
