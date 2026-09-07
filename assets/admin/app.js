@@ -158,7 +158,7 @@
     '    </div>',
     '    <div class="fa_table_wrap" v-else>',
     '      <el-table :data="visibleRules" row-key="id" :empty-text="i18n.no_match" :row-class-name="rowClassName" @selection-change="onSelect" @row-click="onRowClick" style="width:100%">',
-    '        <el-table-column type="selection" width="44" :selectable="selectable"></el-table-column>',
+    '        <el-table-column type="selection" :label="i18n.select_rules" width="44" :selectable="selectable"></el-table-column>',
     '        <el-table-column :label="i18n.col_who" prop="labels.scope" min-width="140"></el-table-column>',
     '        <el-table-column :label="i18n.col_what" prop="labels.target" min-width="160"></el-table-column>',
     '        <el-table-column :label="i18n.col_rate" prop="labels.rate" width="90"></el-table-column>',
@@ -205,6 +205,11 @@
     '  <el-drawer v-model="editor.open" :title="editorTitle" :size="editor.size" class="fa_common_drawer" :before-close="closeEditor" :close-on-click-modal="false" :destroy-on-close="true">',
     '    <el-form label-position="top" :disabled="editor.saving" @submit.prevent="save">',
     '      <el-alert v-if="editor.submitError" type="error" :closable="false" :title="editor.submitError" show-icon></el-alert>',
+    '      <el-button v-if="editor.conflict" :disabled="editor.saving" @click="reviewConflict">{{ i18n.review_latest }}</el-button>',
+    '      <template v-if="editor.draft">',
+    '        <el-alert type="info" :closable="false" :title="i18n.draft_kept"></el-alert>',
+    '        <el-button :disabled="editor.saving" @click="restoreDraft">{{ i18n.restore_draft }}</el-button>',
+    '      </template>',
     '      <el-divider content-position="left">{{ i18n.section_audience }}</el-divider>',
     '      <el-form-item>',
     '        <el-radio-group v-model="editor.form.scope_type" :aria-label="i18n.section_audience" @change="editor.form.scope_id = null">',
@@ -320,6 +325,8 @@
           size: '520px',
           errors: {},
           submitError: '',
+          conflict: false,
+          draft: null,
           productQuery: '',
           productLoading: false,
           productOptions: [],
@@ -330,7 +337,7 @@
 
     computed: {
       isDirty: function () {
-        return this.editor.open && JSON.stringify( this.editor.form ) !== this.editor.initial;
+        return this.editor.open && ( !!this.editor.draft || JSON.stringify( this.editor.form ) !== this.editor.initial );
       },
       byId: function () {
         var map = {};
@@ -454,6 +461,7 @@
           vm.defaultRate = data.default_rate || vm.defaultRate;
           vm.loading     = false;
           vm.loadError   = '';
+          return data;
         }, function ( error ) {
           if ( seq !== vm.loadSeq ) { return; }
           vm.loading   = false;
@@ -605,6 +613,8 @@
         this.productSearchSeq++;
         editor.errors         = {};
         editor.submitError = '';
+        editor.conflict = false;
+        editor.draft = null;
         editor.productQuery   = '';
         editor.productLoading = false;
         editor.revision = this.revision;
@@ -636,6 +646,38 @@
         }
         editor.initial = JSON.stringify( editor.form );
         editor.open = true;
+      },
+      reviewConflict: function () {
+        var vm = this;
+        var editor = vm.editor;
+        if ( editor.saving ) { return; }
+        var draft = { form: JSON.parse( JSON.stringify( editor.form ) ), products: editor.productOptions.slice() };
+        editor.saving = true;
+        return vm.load().then( function ( data ) {
+          editor.saving = false;
+          if ( !data ) { editor.submitError = vm.loadError; return; }
+          var latest = draft.form.id ? vm.byId[ draft.form.id ] : null;
+          if ( draft.form.id && !latest ) {
+            editor.submitError = i18n.deleted_draft;
+            return confirm( i18n.deleted_draft ).then( function ( ok ) {
+              if ( !ok ) { return; }
+              vm.openEditor();
+              draft.form.id = editor.form.id;
+              editor.draft = draft;
+              vm.restoreDraft();
+            } );
+          }
+          vm.openEditor( latest );
+          editor.draft = draft;
+          if ( !latest ) { vm.restoreDraft(); }
+        } );
+      },
+      restoreDraft: function () {
+        var editor = this.editor;
+        if ( editor.saving || !editor.draft ) { return; }
+        editor.form = editor.draft.form;
+        editor.productOptions = editor.draft.products;
+        editor.draft = null;
       },
       closeEditor: function () {
         var vm = this;
@@ -754,7 +796,7 @@
             return;
           }
           editor.submitError = error.message;
-          if ( error.status === 409 ) { vm.loadError = error.message; }
+          if ( error.status === 409 ) { editor.conflict = true; vm.loadError = error.message; }
           notify( 'error', error.message );
         } );
       }

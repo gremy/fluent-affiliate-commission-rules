@@ -86,6 +86,35 @@ renewals that Fluent already attributes. They do not enable lifetime or renewal
 attribution, change customer ownership, or introduce a per-customer commission term.
 Configure those native features in Fluent Affiliate separately.
 
+## Repeat-customer and subscription commissions
+
+Enable lifetime commissions in **Fluent Affiliate → Settings → Referral Settings**.
+Set lifetime expiry to **0** for no expiry or a number of days for a limited term.
+Fluent measures that term from its customer record's creation date; changing a
+rule's From/Until dates does not reset it. Link the customer to the affiliate in
+Fluent's customer management, or let the initial referral link establish ownership.
+Affiliate-group overrides remain governed by Fluent's settings.
+
+For subscription renewals, also enable renewal commissions in both Referral
+Settings and the WooCommerce integration. Fluent's maximum payment count includes
+the initial payment. Lifetime expiry and subscription renewal limits are separate
+native policies: a lifetime expiry does not itself stop subscription renewals.
+
+Create one **B2B orders** rule and one **B2C orders** rule for the required audience.
+Leave the rule dates empty for ongoing rates. **Next 12 months** schedules the same
+calendar window for everyone; it does not give each customer a fresh twelve months.
+
+For installed Pro **1.6.5**, the add-on repairs missing customer identity during
+WooCommerce attribution and permits renewals with a lifetime-attributed parent.
+It replaces only the native callbacks that Fluent enabled, reusing its attribution,
+pricing and referral persistence. This compatibility adapter is restricted to
+1.6.5; rerun the native attribution tests before upgrading Fluent. Other versions
+use their own connector callbacks.
+
+After a save conflict, **Review latest saved rule** shows the current values and
+keeps your draft. **Restore my draft** restores your edits for review and saving.
+If the rule was deleted, you can explicitly recreate the draft as a new rule.
+
 ## Where it appears
 
 | Surface | What you get |

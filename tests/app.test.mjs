@@ -118,3 +118,53 @@ test('customer type defaults to Any, survives editing and is sent on save', asyn
   h.reply(0, { rule: { id: 'b2b-rule' } });
   await saving;
 });
+
+test('conflict recovery reviews saved values and restores a draft with the current revision', async () => {
+  const h = harness();
+  const saved = { id: 'one', status: 'active', scope_type: 'all', customer_type: 'b2b', target_type: 'all', target_ids: [], rate: 5, rate_type: 'percentage' };
+  h.app.openEditor(saved);
+  h.app.editor.form.rate = 17;
+  const saving = h.app.save();
+  h.reply(0, { message: 'Reload rules' }, 409); await saving;
+  const recovering = h.app.reviewConflict();
+  await h.app.closeEditor();
+  assert.equal(h.app.editor.open, true);
+  h.reply(1, { rules: [{ ...saved, rate: 9 }], revision: 'latest' }); await recovering;
+  assert.equal(h.app.editor.form.rate, 9);
+  assert.equal(h.app.editor.draft.form.rate, 17);
+  assert.equal(h.app.isDirty, true);
+  h.app.restoreDraft();
+  assert.equal(h.app.editor.form.rate, 17);
+  const retry = h.app.save();
+  assert.equal(h.requests[2].options.headers['If-Match'], 'latest');
+  h.reply(2, { rule: { id: 'one' } }); await retry;
+  h.reply(3, { rules: [], revision: 'after-save' });
+});
+
+test('failed conflict reload preserves the draft and stale revision', async () => {
+  const h = harness();
+  h.app.editor.form.rate = 17;
+  const recovering = h.app.reviewConflict();
+  h.reply(0, { message: 'Offline' }, 500); await recovering;
+  assert.equal(h.app.editor.form.rate, 17);
+  assert.equal(h.app.editor.revision, 'reviewed-revision');
+  assert.equal(h.app.editor.submitError, 'Offline');
+});
+
+test('a deleted rule is recreated only after an explicit choice and without its old ID', async () => {
+  const h = harness();
+  h.app.editor.form.id = 'deleted';
+  h.app.editor.form.rate = 17;
+  h.decide(Promise.reject(new Error('cancel')));
+  let recovering = h.app.reviewConflict();
+  h.reply(0, { rules: [], revision: 'latest' }); await recovering;
+  assert.equal(h.app.editor.form.id, 'deleted');
+  assert.equal(h.app.editor.form.rate, 17);
+  h.decide(Promise.resolve());
+  recovering = h.app.reviewConflict();
+  h.reply(1, { rules: [], revision: 'latest' }); await recovering;
+  assert.equal(h.app.editor.form.id, '');
+  assert.equal(h.app.editor.form.rate, 17);
+  assert.equal(h.app.editor.isEdit, false);
+  assert.equal(h.app.editor.revision, 'latest');
+});

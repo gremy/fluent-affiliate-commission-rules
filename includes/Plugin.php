@@ -20,6 +20,7 @@ final class Plugin {
     }
 
     ( new ReferralHooks() )->register();
+    add_action( 'init', [ __CLASS__, 'woo_compatibility' ], 99 );
 
     // Widgets stays global: portal_notice_html renders on the front end.
     ( new Admin\Widgets() )->register();
@@ -38,6 +39,15 @@ final class Plugin {
   public static function load_textdomain(): void {
     // init, not plugins_loaded, to avoid the WP 6.7 just-in-time textdomain notice.
     load_plugin_textdomain( 'fa-commission-rules', false, dirname( plugin_basename( FACR_FILE ) ) . '/languages' );
+  }
+
+  public static function woo_compatibility(): void {
+    // Only replace callbacks from the version whose connector contracts we tested.
+    if ( defined( 'FLUENT_AFFILIATE_PRO_VERSION' ) && FLUENT_AFFILIATE_PRO_VERSION === '1.6.5'
+      && Fluent::has_woo()
+      && class_exists( '\FluentAffiliatePro\App\Services\Integrations\WooCommerce\RecurringReferral' ) ) {
+      WooCompatibility::install();
+    }
   }
 
   public static function missing_dependency_notice(): void {

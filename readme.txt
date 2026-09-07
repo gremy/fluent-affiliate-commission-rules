@@ -4,7 +4,7 @@ Tags: affiliate, commission, fluent affiliate, woocommerce, referrals
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,11 @@ One detail worth knowing when reading old audit stamps: the synthetic `fluent:<n
 No. Pro is needed for affiliate groups, lifetime commissions and the WooCommerce integration. Without Pro, the group scope is hidden and everything else works.
 
 == Changelog ==
+
+= 1.3.1 =
+* Repair WooCommerce lifetime attribution and lifetime-parent renewals in Fluent Affiliate Pro 1.6.5 without editing vendor files.
+* Preserve drafts while reviewing a conflicting saved rule.
+* Clarify calendar windows and label the bulk-selection controls in English and Romanian.
 
 = 1.3.0 =
 * Add Any, B2B and B2C order customer types to commission rules.
