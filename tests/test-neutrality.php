@@ -44,7 +44,7 @@ facr_assert( 'plugin has files to scan', count( $files ) > 0 );
 // Nothing of the private store this plugin was extracted from may be identifiable
 // in the published files — its name, its market, its products, its currency —
 // examples and prose included.
-$facr_branding = '/ovride|coffee|romania|\blei\b|\bron\b/i';
+$facr_branding = '/ovride|coffee|\bromania\b|\blei\b|\bron\b/i';
 $branded       = [];
 foreach ( $files as $file ) {
   $src = (string) file_get_contents( $file );

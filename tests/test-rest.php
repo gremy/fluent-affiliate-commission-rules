@@ -36,6 +36,9 @@ if ( ! function_exists( 'facr_rest_call' ) ) {
    */
   function facr_rest_call( string $method, string $path, array $body = [], array $query = [] ): WP_REST_Response {
     $request = new WP_REST_Request( $method, '/fa-commission-rules/v1' . $path );
+    if ( $method !== 'GET' ) {
+      $request->set_header( 'If-Match', Store::revision() );
+    }
     if ( $body ) {
       $request->set_header( 'Content-Type', 'application/json' );
       $request->set_body( (string) wp_json_encode( $body ) );
@@ -355,6 +358,24 @@ try {
   facr_rest( 'bulk with no usable ids is 200 count 0', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'delete', 'ids' => [ 'fluent:0', 'fluent:renewal:1' ] ] )->get_data()['count'] ?? -1 ) === 0 );
   facr_rest( 'bulk delete is 200 with the count', ( facr_rest_call( 'POST', '/rules/bulk', [ 'action' => 'delete', 'ids' => $facr_r_ids ] )->get_data()['count'] ?? -1 ) === 3 );
   facr_rest( 'bulk delete emptied the store', Store::all() === [] );
+
+  $facr_r_request = new WP_REST_Request( 'POST', '/fa-commission-rules/v1/rules' );
+  $facr_r_request->set_header( 'Content-Type', 'application/json' );
+  $facr_r_request->set_body( wp_json_encode( [ 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 5 ] ) );
+  facr_rest( 'writes without a revision require reloading', rest_do_request( $facr_r_request )->get_status() === 428 );
+  $facr_r_request->set_header( 'If-Match', 'stale' );
+  facr_rest( 'stale revision is a conflict', rest_do_request( $facr_r_request )->get_status() === 409 );
+  facr_rest( 'a conflicted write creates no rule', Store::all() === [] );
+  $facr_r_request->set_header( 'If-Match', Store::revision() );
+  $facr_r_created = rest_do_request( $facr_r_request );
+  facr_rest( 'current revision allows creation', $facr_r_created->get_status() === 201 );
+  $facr_r_edit_id = $facr_r_created->get_data()['rule']['id'];
+  $facr_r_stale = Store::revision();
+  Store::set_status( [ $facr_r_edit_id ], 'inactive' );
+  $facr_r_request->set_body( wp_json_encode( [ 'id' => $facr_r_edit_id, 'scope_type' => 'all', 'target_type' => 'all', 'rate' => 9 ] ) );
+  $facr_r_request->set_header( 'If-Match', $facr_r_stale );
+  facr_rest( 'editing a stale snapshot cannot overwrite a newer change', rest_do_request( $facr_r_request )->get_status() === 409 && Store::get( $facr_r_edit_id )['status'] === 'inactive' );
+  Store::delete( $facr_r_edit_id );
 
   // --------------------------------------------------- input hardening ---
   facr_rest( 'scalar() flattens an array to an empty string', \FACommissionRules\Rest\Controller::scalar( [ 'edit' ] ) === '' );

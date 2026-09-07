@@ -69,7 +69,7 @@ final class ReferralHooks {
       [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => (int) $affiliate->group_id ],
       $order_total,
       $lines,
-      $this->rules_for_provider( $provider, 'sale' ),
+      $this->rules_for_provider( $provider, $type === 'lifetime_sale' ? 'lifetime' : 'sale' ),
       current_time( 'Y-m-d' ),
       $this->base_commission_for( $affiliate, $type, $order_total )
     );
@@ -153,7 +153,7 @@ final class ReferralHooks {
    * @return array<int,array<string,mixed>>
    */
   private function rules_for_provider( $provider, string $context ): array {
-    $rules = Store::resolvable( $context );
+    $rules = $context === 'lifetime' ? Store::all() : Store::resolvable( $context );
     if ( (string) $provider === 'woo' ) {
       return $rules;
     }
@@ -276,15 +276,9 @@ final class ReferralHooks {
   /**
    * The rate Fluent would have used, applied to whatever no rule claimed.
    *
-   * ponytail: a base rate is a per-ORDER figure, not a per-remainder one.
-   * Affiliate::getCommission() returns the bare flat rate and ignores the amount
-   * entirely when the rate type is flat or fixed, so asking it again for the
-   * remainder would pay the whole flat amount a second time on top of our rule
-   * lines. The base is therefore taken once on the full order and prorated onto
-   * the remainder's share: algebraically identical to base(remainder) for a
-   * percentage rate, and the only correct reading of a flat one. It also covers
-   * flat GROUP and GLOBAL rates, whose rate type Fluent does not expose — the
-   * lifetime lookup that would tell us is private on its trait.
+   * Preserve the add-on's existing policy: prorate the whole-order base onto
+   * the unclaimed share. For percentage rates this equals base(remainder);
+   * for flat rates it intentionally pays only that share of the flat amount.
    *
    * @param object $affiliate
    * @return callable(float):float
@@ -322,20 +316,17 @@ final class ReferralHooks {
    * @return array<string,mixed>
    */
   private function stamp( array $settings, array $result ): array {
-    // Rounded here, at the boundary, so the stamp a human reads actually adds up
-    // to the amount that was written.
-    $lines = [];
-    foreach ( $result['lines'] as $line ) {
-      $line['commission'] = round( (float) $line['commission'], 2 );
-      $lines[]            = $line;
-    }
-
+    // Preserve calculation precision. The final amount and adjustment explain
+    // how the unrounded components become the amount written to the referral.
+    $raw = array_sum( array_column( $result['lines'], 'commission' ) ) + $result['remainder_commission'];
     $settings['fa_commission_rules'] = [
       'version'   => Store::STAMP_VERSION,
-      'lines'     => $lines,
+      'amount'    => $result['amount'],
+      'rounding_adjustment' => $result['amount'] - $raw,
+      'lines'     => $result['lines'],
       'remainder' => [
-        'total'      => round( (float) $result['remainder_total'], 2 ),
-        'commission' => round( (float) $result['remainder_commission'], 2 ),
+        'total'      => $result['remainder_total'],
+        'commission' => $result['remainder_commission'],
       ],
     ];
     return $settings;

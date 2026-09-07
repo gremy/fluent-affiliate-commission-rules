@@ -101,7 +101,7 @@ final class Labels {
     }
     return sprintf(
       /* translators: %s: a flat commission amount, per order line, already in store currency */
-      __( '%s flat', 'fa-commission-rules' ),
+      __( '%s per order line', 'fa-commission-rules' ),
       Fluent::money( (float) $rule['rate'] )
     );
   }

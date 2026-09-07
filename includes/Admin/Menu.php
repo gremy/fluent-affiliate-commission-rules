@@ -90,8 +90,9 @@ final class Menu {
 
     wp_register_script( 'facr-vue', FACR_URL . 'assets/vendor/vue.global.prod.js', [], '3.5.17', true );
     wp_register_script( 'facr-element-plus', FACR_URL . 'assets/vendor/element-plus.full.min.js', [ 'facr-vue' ], '2.9.11', true );
+    wp_register_script( 'facr-element-locale', FACR_URL . 'assets/vendor/element-plus.ro.min.js', [ 'facr-element-plus' ], '2.9.11', true );
     wp_register_script( 'facr-helpers', FACR_URL . 'assets/admin/helpers.js', [], FACR_VERSION, true );
-    wp_enqueue_script( 'facr-app', FACR_URL . 'assets/admin/app.js', [ 'facr-vue', 'facr-element-plus', 'facr-helpers' ], FACR_VERSION, true );
+    wp_enqueue_script( 'facr-app', FACR_URL . 'assets/admin/app.js', [ 'facr-vue', 'facr-element-plus', 'facr-element-locale', 'facr-helpers' ], FACR_VERSION, true );
 
     // wp_localize_script casts top-level scalars to strings: has_pro/has_woo
     // arrive as '1'/'0' and the app compares against '1'.
@@ -111,6 +112,7 @@ final class Menu {
         // The store's own today, not the browser's: a scheduled/expired badge has
         // to agree with the dates the server compares rules against.
         'today'             => wp_date( 'Y-m-d' ),
+        'locale'            => str_starts_with( determine_locale(), 'ro' ) ? 'ro' : 'en',
         'i18n'              => Strings::all(),
       ]
     );
@@ -203,6 +205,7 @@ JS;
       . '.facr-bulk-bar{border-top:1px solid var(--fla-primary-border);padding-top:12px;padding-bottom:12px}'
       . '.facr-badge-note,.facr-readonly,.facr-help{font-size:12px;color:var(--fla-secondary-text);line-height:1.4}'
       . '.facr-badge-note{margin-top:4px}'
+      . '.facr-error{color:var(--el-color-danger);width:100%;margin-bottom:4px}'
       . '.facr-help{margin-top:4px;width:100%}'
       . '.facr-result{margin:16px 0 0;font-size:14px;color:var(--fla-primary-text)}'
       . '.facr-money,.facr-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}'

@@ -100,7 +100,10 @@ final class Resolver {
       }
 
       $line_total      = (float) ( $line['total'] ?? 0 );
-      $line_commission = self::line_commission( $line_total, (float) $winner['rate'], (string) $winner['rate_type'] );
+      // Fluent pays its native flat row even on a zero-total item.
+      $line_commission = ! empty( $winner['readonly'] ) && $winner['rate_type'] !== 'percentage'
+        ? max( 0.0, (float) $winner['rate'] )
+        : self::line_commission( $line_total, (float) $winner['rate'], (string) $winner['rate_type'] );
       $matched_sum    += max( 0.0, $line_total );
       $commission     += $line_commission;
 
@@ -136,60 +139,45 @@ final class Resolver {
   }
 
   /**
-   * From applicable()'s output, the single rule that would actually be
-   * advertised to an affiliate per distinct target — the same specificity
-   * order that decides real money on an order line (scope affiliate > group >
-   * all), so an "own all-products 15%" rule and a "group all-products 10%"
-   * rule never both get shown as if they stack. Target rank never enters the
-   * tie-break here: a key already groups rules by identical target, so within
-   * a key every candidate has the same target specificity.
-   *
-   * @param array<int,array<string,mixed>> $rules
-   * @param array{affiliate_id:int,group_id:int} $context
-   * @param string $now Y-m-d
-   * @return array<int,array<string,mixed>>
+   * Rules with potentially payable coverage, in payout priority order.
+   * Probe each target separately so overlapping ID lists can be trimmed.
+   * The optional catalog probe includes parent/variation IDs and category ancestry.
+   * Cards qualify remaining coverage because other targets can still overlap.
    */
-  public static function effective( array $rules, array $context, string $now ): array {
-    $scope_rank = [ 'affiliate' => 3, 'group' => 2, 'all' => 1 ];
-    $winners    = [];
-
-    foreach ( self::applicable( $rules, $context, $now ) as $idx => $rule ) {
-      $key     = self::target_key( $rule );
-      $rank    = $scope_rank[ (string) ( $rule['scope_type'] ?? 'all' ) ] ?? 1;
-      $created = (string) ( $rule['created_at'] ?? '' );
-
-      if ( ! isset( $winners[ $key ] ) ) {
-        $winners[ $key ] = [ 'rule' => $rule, 'rank' => $rank, 'created_at' => $created, 'idx' => $idx ];
-        continue;
+  public static function effective( array $rules, array $context, string $now, ?callable $target_line = null ): array {
+    $candidates = self::applicable( $rules, $context, $now );
+    $out = [];
+    foreach ( $candidates as $rule ) {
+      $ids = $rule['target_type'] === 'all' ? [ 0 ] : $rule['target_ids'];
+      $kept = [];
+      foreach ( $ids as $id ) {
+        $line = [
+          'product_id' => $rule['target_type'] === 'product' ? (int) $id : 0,
+          'term_ids' => $rule['target_type'] === 'category' ? [ (int) $id ] : [],
+          'term_depths' => $rule['target_type'] === 'category' ? [ (int) $id => 0 ] : [],
+        ];
+        if ( $target_line ) {
+          $line = $target_line( $rule, (int) $id );
+        }
+        $winner = self::winning_rule( $line, $candidates );
+        if ( $winner && $winner['id'] === $rule['id'] ) {
+          $kept[] = (int) $id;
+        }
       }
-
-      $current = $winners[ $key ];
-      $better  = $rank > $current['rank']
-        || ( $rank === $current['rank'] && strcmp( $created, $current['created_at'] ) > 0 )
-        || ( $rank === $current['rank'] && $created === $current['created_at'] && $idx < $current['idx'] );
-
-      if ( $better ) {
-        $winners[ $key ] = [ 'rule' => $rule, 'rank' => $rank, 'created_at' => $created, 'idx' => $idx ];
+      if ( $kept ) {
+        $rule['target_ids'] = $rule['target_type'] === 'all' ? [] : $kept;
+        $out[] = $rule;
       }
     }
-
-    return array_values( array_map( static fn( array $winner ): array => $winner['rule'], $winners ) );
-  }
-
-  /**
-   * target_type plus its sorted target ids — 'all' is always one key,
-   * regardless of scope, so a "15%" and a "10%" rule both covering all
-   * products collapse to the same slot.
-   *
-   * @param array<string,mixed> $rule
-   */
-  private static function target_key( array $rule ): string {
-    if ( (string) ( $rule['target_type'] ?? 'all' ) === 'all' ) {
-      return 'all';
-    }
-    $ids = array_map( 'intval', (array) ( $rule['target_ids'] ?? [] ) );
-    sort( $ids );
-    return (string) $rule['target_type'] . ':' . implode( ',', $ids );
+    usort( $out, static function ( array $a, array $b ): int {
+      if ( ! empty( $a['readonly'] ) || ! empty( $b['readonly'] ) ) {
+        // Native rows keep their original order after our overrides.
+        return (int) ! empty( $a['readonly'] ) <=> (int) ! empty( $b['readonly'] );
+      }
+      return self::score( $b ) <=> self::score( $a )
+        ?: strcmp( (string) $b['created_at'], (string) $a['created_at'] );
+    } );
+    return $out;
   }
 
   public static function line_commission( float $total, float $rate, string $rate_type ): float {
@@ -214,7 +202,7 @@ final class Resolver {
       $best       = null;
       $best_score = -1;
       foreach ( $rules as $other ) {
-        if ( (string) $other['id'] === (string) $rule['id'] || ( $other['status'] ?? 'active' ) !== 'active' ) {
+        if ( ! empty( $other['readonly'] ) || (string) $other['id'] === (string) $rule['id'] || ( $other['status'] ?? 'active' ) !== 'active' ) {
           continue;
         }
         if ( self::score( $other ) <= self::score( $rule ) ) {
@@ -249,11 +237,11 @@ final class Resolver {
     foreach ( $rules as $rule ) {
       $id         = (string) $rule['id'];
       $map[ $id ] = [];
-      if ( ( $rule['status'] ?? 'active' ) !== 'active' ) {
+      if ( ! empty( $rule['readonly'] ) || ( $rule['status'] ?? 'active' ) !== 'active' ) {
         continue;
       }
       foreach ( $rules as $other ) {
-        if ( (string) $other['id'] === $id || ( $other['status'] ?? 'active' ) !== 'active' ) {
+        if ( ! empty( $other['readonly'] ) || (string) $other['id'] === $id || ( $other['status'] ?? 'active' ) !== 'active' ) {
           continue;
         }
         if ( self::score( $other ) !== self::score( $rule ) ) {
@@ -302,9 +290,24 @@ final class Resolver {
    */
   private static function winning_rule( array $line, array $candidates ): ?array {
     $winner = null;
+    $native = null;
     $best   = [ 'score' => -1, 'depth' => PHP_INT_MAX, 'created_at' => '' ];
 
     foreach ( $candidates as $rule ) {
+      if ( ! empty( $rule['readonly'] ) ) {
+        // Native Woo rows use parent product IDs and directly assigned terms,
+        // with the first matching row winning regardless of target specificity.
+        $native_line = $line;
+        $native_line['variation_id'] = 0;
+        $native_line['term_ids'] = array_values( array_filter(
+          (array) ( $line['term_ids'] ?? [] ),
+          static fn( $id ): bool => (int) ( $line['term_depths'][ $id ] ?? 0 ) === 0
+        ) );
+        if ( $native === null && self::match_depth( $native_line, $rule ) !== null ) {
+          $native = $rule;
+        }
+        continue;
+      }
       $depth = self::match_depth( $line, $rule );
       if ( $depth === null ) {
         continue;
@@ -322,7 +325,7 @@ final class Resolver {
       }
     }
 
-    return $winner;
+    return $winner ?? $native;
   }
 
   /**

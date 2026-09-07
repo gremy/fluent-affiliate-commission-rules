@@ -7,6 +7,7 @@ below to update; never edit them in place.
 | File | Package | Version | Source |
 |---|---|---|---|
 | `vue.global.prod.js` | vue | **3.5.17** (matches the Vue Fluent Affiliate 1.6.5 ships) | https://cdn.jsdelivr.net/npm/vue@3.5.17/dist/vue.global.prod.js |
+| `element-plus.ro.min.js` | element-plus locale | **2.9.11** | https://cdn.jsdelivr.net/npm/element-plus@2.9.11/dist/locale/ro.min.js |
 | `element-plus.full.min.js` | element-plus | **2.9.11** | https://cdn.jsdelivr.net/npm/element-plus@2.9.11/dist/index.full.min.js |
 
 Element Plus component CSS is deliberately **not** vendored: the admin page

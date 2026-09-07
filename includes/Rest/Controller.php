@@ -35,19 +35,19 @@ final class Controller {
       '/rules',
       [
         [ 'methods' => 'GET', 'callback' => [ $this, 'index' ], 'permission_callback' => $permission ],
-        [ 'methods' => 'POST', 'callback' => [ $this, 'save' ], 'permission_callback' => $permission ],
+        [ 'methods' => 'POST', 'callback' => $this->writer( 'save' ), 'permission_callback' => $permission ],
       ]
     );
     // Registered before the /rules/{id} pattern so a bulk POST is never read as an id.
     register_rest_route(
       self::NAMESPACE,
       '/rules/bulk',
-      [ 'methods' => 'POST', 'callback' => [ $this, 'bulk' ], 'permission_callback' => $permission ]
+      [ 'methods' => 'POST', 'callback' => $this->writer( 'bulk' ), 'permission_callback' => $permission ]
     );
     register_rest_route(
       self::NAMESPACE,
       '/rules/(?P<id>[A-Za-z0-9:_-]+)',
-      [ 'methods' => 'DELETE', 'callback' => [ $this, 'delete' ], 'permission_callback' => $permission ]
+      [ 'methods' => 'DELETE', 'callback' => $this->writer( 'delete' ), 'permission_callback' => $permission ]
     );
     register_rest_route(
       self::NAMESPACE,
@@ -68,6 +68,17 @@ final class Controller {
     );
   }
 
+  /** Require the collection the client actually reviewed, then mutate atomically. */
+  private function writer( string $method ): callable {
+    return function ( WP_REST_Request $request ) use ( $method ) {
+      $revision = $request->get_header( 'If-Match' );
+      if ( $revision === null || $revision === '' ) {
+        return new WP_Error( 'facr_revision_required', __( 'Reload the rules before making changes.', 'fa-commission-rules' ), [ 'status' => 428 ] );
+      }
+      return Store::mutate( fn() => $this->$method( $request ), $revision );
+    };
+  }
+
   /**
    * One request value, safe to hand to sanitize_key()/sanitize_text_field()/(int).
    * A JSON body can put an array where a scalar is expected, and every one of
@@ -84,9 +95,11 @@ final class Controller {
   public function index(): WP_REST_Response {
     // Both maps are computed on the WHOLE list: a rule the client filters out
     // of view still overrides — and still conflicts with — the rules in it.
-    $rules = array_merge( Store::all(), Store::fluent_global_rules() );
+    $own_rules = Store::all();
+    $rules = array_merge( $own_rules, Store::fluent_global_rules() );
     return new WP_REST_Response(
       [
+        'revision'     => Store::revision( $own_rules ),
         'rules'        => array_map( [ $this, 'present' ], $rules ),
         'shadow'       => (object) Resolver::shadow_map( $rules ),
         'tie'          => (object) Resolver::tie_map( $rules ),

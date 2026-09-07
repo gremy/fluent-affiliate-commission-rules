@@ -7,9 +7,7 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Every string the admin app shows, translated once here and handed to the
- * browser as facrAdmin.i18n. All of OUR strings come from PHP (Element Plus's
- * own untranslated locale strings — date-picker month/weekday names, "No
- * data"/"Loading" — stay English, same as Fluent's own admin).
+ * browser as facrAdmin.i18n. Application strings come from PHP; Element Plus loads the matching locale.
  *
  * @package FACommissionRules
  */
@@ -21,8 +19,7 @@ final class Strings {
       'page_title'           => __( 'Commission rules', 'fa-commission-rules' ),
       'add_rule'             => __( 'Add rule', 'fa-commission-rules' ),
       'add_first'            => __( 'Add the first rule', 'fa-commission-rules' ),
-      /* translators: %s: the commission rate every affiliate currently inherits */
-      'empty_body'           => __( 'No commission rules yet. Every affiliate earns the inherited default rate of %s.', 'fa-commission-rules' ),
+      'empty_body'           => __( 'No commission rules yet. Affiliates use their configured Fluent Affiliate rates.', 'fa-commission-rules' ),
       'no_match'             => __( 'No rule matches these filters.', 'fa-commission-rules' ),
       'filter_all_audiences' => __( 'All audiences', 'fa-commission-rules' ),
       'filter_affiliate'     => __( 'Affiliate', 'fa-commission-rules' ),
@@ -50,7 +47,7 @@ final class Strings {
       'status_scheduled'     => __( 'Scheduled', 'fa-commission-rules' ),
       'status_expired'       => __( 'Expired', 'fa-commission-rules' ),
       /* translators: %s: the narrower rule that takes precedence for some products */
-      'badge_shadow'         => __( 'Overridden for some products by: %s', 'fa-commission-rules' ),
+      'badge_shadow'         => __( 'May be overridden for some products by: %s', 'fa-commission-rules' ),
       /* translators: 1: who the narrower rule applies to, 2: the products it targets */
       'badge_shadow_by'      => __( '%1$s → %2$s', 'fa-commission-rules' ),
       'badge_tie'            => __( 'Conflict: two rules are equally specific', 'fa-commission-rules' ),
@@ -65,12 +62,9 @@ final class Strings {
       'confirm_title'        => __( 'Please confirm', 'fa-commission-rules' ),
       'confirm_ok'           => __( 'Yes, continue', 'fa-commission-rules' ),
       'confirm_cancel'       => __( 'Cancel', 'fa-commission-rules' ),
-      /* translators: %s: the store's inherited default commission rate */
-      'confirm_delete_one'   => __( 'Delete this rule? For those products the affiliate reverts to the next matching rule, or to the default rate of %s.', 'fa-commission-rules' ),
-      /* translators: %s: the store's inherited default commission rate */
-      'confirm_delete_many'  => __( 'Delete the selected rules? For those products each affiliate reverts to the next matching rule, or to the inherited default rate of %s.', 'fa-commission-rules' ),
-      /* translators: %s: the store's inherited default commission rate */
-      'confirm_deactivate'   => __( 'Deactivate the selected rules? For those products each affiliate reverts to the next matching rule, or to the inherited default rate of %s.', 'fa-commission-rules' ),
+      'confirm_delete_one'   => __( 'Delete this rule? The next matching rule or the affiliate’s configured Fluent rate will apply.', 'fa-commission-rules' ),
+      'confirm_delete_many'  => __( 'Delete the selected rules? The next matching rule or each affiliate’s configured Fluent rate will apply.', 'fa-commission-rules' ),
+      'confirm_deactivate'   => __( 'Deactivate the selected rules? The next matching rule or each affiliate’s configured Fluent rate will apply.', 'fa-commission-rules' ),
       'deleted'              => __( 'Rule deleted.', 'fa-commission-rules' ),
       'bulk_done'            => __( 'Rules updated.', 'fa-commission-rules' ),
       /* translators: %s: what the saved rule does, in plain words */
@@ -78,6 +72,32 @@ final class Strings {
       'tie_title'            => __( 'Rule saved, with a conflict', 'fa-commission-rules' ),
       'tie_warning'          => __( 'Another active rule is exactly as specific, so the newer of the two wins. Look for the Conflict flag in the list.', 'fa-commission-rules' ),
       'error_generic'        => __( 'Something went wrong. Please try again.', 'fa-commission-rules' ),
+
+      'discard_title'        => __( 'Discard unsaved changes?', 'fa-commission-rules' ),
+      'discard_body'         => __( 'Your changes have not been saved.', 'fa-commission-rules' ),
+      'discard'              => __( 'Discard changes', 'fa-commission-rules' ),
+      'keep_editing'         => __( 'Keep editing', 'fa-commission-rules' ),
+      'reload'               => __( 'Reload rules', 'fa-commission-rules' ),
+      'rate_label'           => __( 'Commission amount', 'fa-commission-rules' ),
+      'rate_type_label'      => __( 'Commission type', 'fa-commission-rules' ),
+
+      // Accessibility strings missing from Element Plus 2.9.11's ro locale.
+      'close_dialog'         => __( 'Close this dialog', 'fa-commission-rules' ),
+      'date_day_hint'        => __( 'Use the arrow keys and Enter to select a day.', 'fa-commission-rules' ),
+      'date_month_hint'      => __( 'Use the arrow keys and Enter to select a month.', 'fa-commission-rules' ),
+      'date_year_hint'       => __( 'Use the arrow keys and Enter to select a year.', 'fa-commission-rules' ),
+      'selected_date'        => __( 'Selected date', 'fa-commission-rules' ),
+      'calendar_week'        => __( 'Week', 'fa-commission-rules' ),
+      'decrease'             => __( 'Decrease number', 'fa-commission-rules' ),
+      'increase'             => __( 'Increase number', 'fa-commission-rules' ),
+      'toggle_dropdown'      => __( 'Toggle menu', 'fa-commission-rules' ),
+      'sunday'               => __( 'Sunday', 'fa-commission-rules' ),
+      'monday'               => __( 'Monday', 'fa-commission-rules' ),
+      'tuesday'              => __( 'Tuesday', 'fa-commission-rules' ),
+      'wednesday'            => __( 'Wednesday', 'fa-commission-rules' ),
+      'thursday'             => __( 'Thursday', 'fa-commission-rules' ),
+      'friday'               => __( 'Friday', 'fa-commission-rules' ),
+      'saturday'             => __( 'Saturday', 'fa-commission-rules' ),
 
       // Editor drawer.
       'editor_add_title'     => __( 'Add commission rule', 'fa-commission-rules' ),
@@ -106,7 +126,7 @@ final class Strings {
       'ends_at'              => __( 'Until', 'fa-commission-rules' ),
       'preset_year'          => __( 'First 12 months', 'fa-commission-rules' ),
       'time_help'            => __( 'Leave both empty for a rule that never expires.', 'fa-commission-rules' ),
-      'note_help'            => __( 'Why this rule exists. Nobody remembers in a year.', 'fa-commission-rules' ),
+      'note_help'            => __( 'Visible to administrators only.', 'fa-commission-rules' ),
       'status_label'         => __( 'Status', 'fa-commission-rules' ),
       'status_active'        => __( 'Active', 'fa-commission-rules' ),
       'status_inactive_option' => __( 'Inactive', 'fa-commission-rules' ),
@@ -130,7 +150,7 @@ final class Strings {
       'sentence_category'    => __( 'the chosen categories', 'fa-commission-rules' ),
       'sentence_product'     => __( 'the chosen products', 'fa-commission-rules' ),
       /* translators: %s: a flat commission amount, per order line, already in store currency */
-      'flat_suffix'          => __( '%s flat', 'fa-commission-rules' ),
+      'flat_suffix'          => __( '%s per order line', 'fa-commission-rules' ),
     ];
   }
 }

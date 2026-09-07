@@ -70,7 +70,7 @@ try {
   foreach ( [ 'page_title', 'add_rule', 'empty_body', 'confirm_delete_one', 'sentence', 'sentence_between', 'flat_suffix', 'tie_warning', 'editor_add_title', 'preset_year' ] as $facr_a_key ) {
     facr_adm( "Strings::all() has {$facr_a_key}", isset( $facr_a_strings[ $facr_a_key ] ) );
   }
-  facr_adm( 'empty_body names the default rate placeholder', strpos( $facr_a_strings['empty_body'] ?? '', '%s' ) !== false );
+  facr_adm( 'empty_body uses configured rates rather than promising a global fallback', strpos( $facr_a_strings['empty_body'], '%s' ) === false );
   facr_adm( 'sentence has three placeholders', strpos( $facr_a_strings['sentence'] ?? '', '%3$s' ) !== false );
 
   // ------------------------------------------------------------- render ---

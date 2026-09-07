@@ -4,746 +4,764 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Commission Rules for Fluent Affiliate 1.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/fluent-affiliate-commission-rules\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2026-09-07T14:44:27+00:00\n"
+"PO-Revision-Date: 2026-09-07 12:00+0300\n"
+"Last-Translator: Webbership\n"
+"Language-Team: Webbership\n"
+"Language: ro_RO\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T14:59:33+00:00\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"X-Generator: WP-CLI 2.12.0\n"
+"Plural-Forms: nplurals=3; plural=(n == 1 ? 0 : (n == 0 || (n % 100 > 0 && n % 100 < 20)) ? 1 : 2);\n"
 "X-Domain: fa-commission-rules\n"
+"X-Generator: WP-CLI 2.12.0\n"
 
 #. Plugin Name of the plugin
 #: fluent-affiliate-commission-rules.php
 msgid "Commission Rules for Fluent Affiliate"
-msgstr ""
+msgstr "Reguli de comision pentru Fluent Affiliate"
 
 #. Plugin URI of the plugin
 #: fluent-affiliate-commission-rules.php
 msgid "https://github.com/gremy/fluent-affiliate-commission-rules"
-msgstr ""
+msgstr "https://github.com/gremy/fluent-affiliate-commission-rules"
 
 #. Description of the plugin
 #: fluent-affiliate-commission-rules.php
-msgid "Per-affiliate and per-group commission rules for Fluent Affiliate, targeted at a product, a product category, or everything, with an optional date window."
+msgid ""
+"Per-affiliate and per-group commission rules for Fluent Affiliate, targeted "
+"at a product, a product category, or everything, with an optional date "
+"window."
 msgstr ""
+"Reguli de comision pentru afiliați și grupuri de afiliați în Fluent "
+"Affiliate, aplicate unui produs, unei categorii sau tuturor produselor, cu o"
+" perioadă opțională de valabilitate."
 
 #. Author of the plugin
 #: fluent-affiliate-commission-rules.php
 msgid "Webbership"
-msgstr ""
+msgstr "Webbership"
 
-#: includes/Admin/Menu.php:48
-#: includes/Admin/Menu.php:49
+#: includes/Admin/Menu.php:48 includes/Admin/Menu.php:49
 msgid "Commission Rules"
-msgstr ""
+msgstr "Reguli de comision"
 
 #: includes/Admin/Menu.php:66
 msgid "Commissions"
-msgstr ""
+msgstr "Comisioane"
 
 #: includes/Admin/Menu.php:78
 msgid "You do not have permission to manage commission rules."
-msgstr ""
+msgstr "Nu ai permisiunea de a gestiona regulile de comision."
 
-#: includes/Admin/Strings.php:19
-#: includes/Admin/Widgets.php:95
+#: includes/Admin/Strings.php:19 includes/Admin/Widgets.php:95
 msgid "Commission rules"
-msgstr ""
+msgstr "Reguli de comision"
 
 #: includes/Admin/Strings.php:20
 msgid "Add rule"
-msgstr ""
+msgstr "Adaugă regulă"
 
 #: includes/Admin/Strings.php:21
 msgid "Add the first rule"
-msgstr ""
+msgstr "Adaugă prima regulă"
 
 #: includes/Admin/Strings.php:22
-msgid "No commission rules yet. Affiliates use their configured Fluent Affiliate rates."
+msgid ""
+"No commission rules yet. Affiliates use their configured Fluent Affiliate "
+"rates."
 msgstr ""
+"Nu există încă reguli de comision. Se aplică ratele configurate pentru "
+"fiecare afiliat în Fluent Affiliate."
 
 #: includes/Admin/Strings.php:23
 msgid "No rule matches these filters."
-msgstr ""
+msgstr "Nicio regulă nu corespunde acestor filtre."
 
 #: includes/Admin/Strings.php:24
 msgid "All audiences"
-msgstr ""
+msgstr "Toți destinatarii"
 
 #: includes/Admin/Strings.php:25
 msgid "Affiliate"
-msgstr ""
+msgstr "Afiliat"
 
-#: includes/Admin/Strings.php:26
-#: includes/Admin/Widgets.php:48
+#: includes/Admin/Strings.php:26 includes/Admin/Widgets.php:48
 msgid "Group"
-msgstr ""
+msgstr "Grup"
 
-#: includes/Admin/Strings.php:27
-#: includes/Admin/Strings.php:110
-#: includes/Admin/Strings.php:146
-#: includes/Admin/Widgets.php:50
+#: includes/Admin/Strings.php:27 includes/Admin/Strings.php:110
+#: includes/Admin/Strings.php:146 includes/Admin/Widgets.php:50
 #: includes/Labels.php:48
 msgid "Everyone"
-msgstr ""
+msgstr "Toți afiliații"
 
 #: includes/Admin/Strings.php:28
 msgid "Any target"
-msgstr ""
+msgstr "Orice destinație"
 
 #: includes/Admin/Strings.php:29
 msgid "A product"
-msgstr ""
+msgstr "Un produs"
 
 #: includes/Admin/Strings.php:30
 msgid "A category"
-msgstr ""
+msgstr "O categorie"
 
-#: includes/Admin/Strings.php:31
-#: includes/Admin/Strings.php:115
+#: includes/Admin/Strings.php:31 includes/Admin/Strings.php:115
 #: includes/Labels.php:76
 msgid "All products"
-msgstr ""
+msgstr "Toate produsele"
 
 #: includes/Admin/Strings.php:32
 msgid "Any status"
-msgstr ""
+msgstr "Orice stare"
 
-#: includes/Admin/Strings.php:33
-#: includes/Admin/Strings.php:131
+#: includes/Admin/Strings.php:33 includes/Admin/Strings.php:131
 msgid "Active"
-msgstr ""
+msgstr "Activă"
 
-#: includes/Admin/Strings.php:34
-#: includes/Admin/Strings.php:45
+#: includes/Admin/Strings.php:34 includes/Admin/Strings.php:45
 #: includes/Admin/Strings.php:132
 msgid "Inactive"
-msgstr ""
+msgstr "Inactivă"
 
 #: includes/Admin/Strings.php:35
 msgid "Search notes, products, people…"
-msgstr ""
+msgstr "Caută note, produse, persoane…"
 
 #: includes/Admin/Strings.php:36
 msgid "Who"
-msgstr ""
+msgstr "Cui se aplică"
 
-#: includes/Admin/Strings.php:37
-#: includes/Admin/Widgets.php:87
+#: includes/Admin/Strings.php:37 includes/Admin/Widgets.php:87
 msgid "For what"
-msgstr ""
+msgstr "Pentru ce"
 
-#: includes/Admin/Strings.php:38
-#: includes/Admin/Widgets.php:88
+#: includes/Admin/Strings.php:38 includes/Admin/Widgets.php:88
 msgid "Rate"
-msgstr ""
+msgstr "Rată"
 
-#: includes/Admin/Strings.php:39
-#: includes/Admin/Widgets.php:89
+#: includes/Admin/Strings.php:39 includes/Admin/Widgets.php:89
 msgid "Window"
-msgstr ""
+msgstr "Perioadă"
 
-#: includes/Admin/Strings.php:40
-#: includes/Admin/Strings.php:130
+#: includes/Admin/Strings.php:40 includes/Admin/Strings.php:130
 msgid "Status"
-msgstr ""
+msgstr "Stare"
 
 #: includes/Admin/Strings.php:41
 msgid "Note"
-msgstr ""
+msgstr "Notă"
 
 #: includes/Admin/Strings.php:42
 msgid "Actions"
-msgstr ""
+msgstr "Acțiuni"
 
 #: includes/Admin/Strings.php:43
 msgid "Row actions"
-msgstr ""
+msgstr "Acțiuni pentru rând"
 
 #: includes/Admin/Strings.php:44
 msgid "Global (Fluent)"
-msgstr ""
+msgstr "Globală (Fluent)"
 
 #: includes/Admin/Strings.php:46
 msgid "Effective"
-msgstr ""
+msgstr "În vigoare"
 
 #: includes/Admin/Strings.php:47
 msgid "Scheduled"
-msgstr ""
+msgstr "Programată"
 
 #: includes/Admin/Strings.php:48
 msgid "Expired"
-msgstr ""
+msgstr "Expirată"
 
 #. translators: %s: the narrower rule that takes precedence for some products
 #: includes/Admin/Strings.php:50
-#, php-format
 msgid "May be overridden for some products by: %s"
-msgstr ""
+msgstr "Poate fi înlocuită pentru unele produse de: %s"
 
-#. translators: 1: who the narrower rule applies to, 2: the products it targets
+#. translators: 1: who the narrower rule applies to, 2: the products it
+#. targets
 #: includes/Admin/Strings.php:52
-#, php-format
 msgid "%1$s → %2$s"
-msgstr ""
+msgstr "%1$s → %2$s"
 
 #: includes/Admin/Strings.php:53
 msgid "Conflict: two rules are equally specific"
-msgstr ""
+msgstr "Conflict: două reguli au aceeași prioritate"
 
-#: includes/Admin/Strings.php:54
-#: includes/Rest/Controller.php:204
+#: includes/Admin/Strings.php:54 includes/Rest/Controller.php:204
 #: includes/Rest/Controller.php:323
-msgid "Fluent's global rates are read-only here; edit them in Fluent Affiliate's WooCommerce settings."
+msgid ""
+"Fluent's global rates are read-only here; edit them in Fluent Affiliate's "
+"WooCommerce settings."
 msgstr ""
+"Ratele globale Fluent pot fi doar consultate aici; modifică-le în setările "
+"WooCommerce din Fluent Affiliate."
 
 #: includes/Admin/Strings.php:55
 msgid "Read-only"
-msgstr ""
+msgstr "Doar citire"
 
 #: includes/Admin/Strings.php:56
 msgid "Edit"
-msgstr ""
+msgstr "Editează"
 
 #: includes/Admin/Strings.php:57
 msgid "Delete"
-msgstr ""
+msgstr "Șterge"
 
 #: includes/Admin/Strings.php:58
 msgid "Activate"
-msgstr ""
+msgstr "Activează"
 
 #: includes/Admin/Strings.php:59
 msgid "Deactivate"
-msgstr ""
+msgstr "Dezactivează"
 
 #. translators: %d: number of selected rules
 #: includes/Admin/Strings.php:61
-#, php-format
 msgid "%d selected"
-msgstr ""
+msgstr "%d selectate"
 
 #: includes/Admin/Strings.php:62
 msgid "Please confirm"
-msgstr ""
+msgstr "Confirmă acțiunea"
 
 #: includes/Admin/Strings.php:63
 msgid "Yes, continue"
-msgstr ""
+msgstr "Da, continuă"
 
-#: includes/Admin/Strings.php:64
-#: includes/Admin/Strings.php:135
+#: includes/Admin/Strings.php:64 includes/Admin/Strings.php:135
 msgid "Cancel"
-msgstr ""
+msgstr "Anulează"
 
 #: includes/Admin/Strings.php:65
-msgid "Delete this rule? The next matching rule or the affiliate’s configured Fluent rate will apply."
+msgid ""
+"Delete this rule? The next matching rule or the affiliate’s configured "
+"Fluent rate will apply."
 msgstr ""
+"Ștergi această regulă? Se va aplica următoarea regulă potrivită sau rata "
+"configurată pentru afiliat în Fluent."
 
 #: includes/Admin/Strings.php:66
-msgid "Delete the selected rules? The next matching rule or each affiliate’s configured Fluent rate will apply."
+msgid ""
+"Delete the selected rules? The next matching rule or each affiliate’s "
+"configured Fluent rate will apply."
 msgstr ""
+"Ștergi regulile selectate? Se va aplica următoarea regulă potrivită sau rata"
+" configurată pentru fiecare afiliat în Fluent."
 
 #: includes/Admin/Strings.php:67
-msgid "Deactivate the selected rules? The next matching rule or each affiliate’s configured Fluent rate will apply."
+msgid ""
+"Deactivate the selected rules? The next matching rule or each affiliate’s "
+"configured Fluent rate will apply."
 msgstr ""
+"Dezactivezi regulile selectate? Se va aplica următoarea regulă potrivită sau"
+" rata configurată pentru fiecare afiliat în Fluent."
 
 #: includes/Admin/Strings.php:68
 msgid "Rule deleted."
-msgstr ""
+msgstr "Regula a fost ștearsă."
 
 #: includes/Admin/Strings.php:69
 msgid "Rules updated."
-msgstr ""
+msgstr "Regulile au fost actualizate."
 
 #. translators: %s: what the saved rule does, in plain words
 #: includes/Admin/Strings.php:71
-#, php-format
 msgid "Rule saved: %s"
-msgstr ""
+msgstr "Regulă salvată: %s"
 
 #: includes/Admin/Strings.php:72
 msgid "Rule saved, with a conflict"
-msgstr ""
+msgstr "Regulă salvată, cu un conflict"
 
 #: includes/Admin/Strings.php:73
-msgid "Another active rule is exactly as specific, so the newer of the two wins. Look for the Conflict flag in the list."
+msgid ""
+"Another active rule is exactly as specific, so the newer of the two wins. "
+"Look for the Conflict flag in the list."
 msgstr ""
+"O altă regulă activă are aceeași prioritate, așa că se aplică regula mai "
+"nouă. Caută marcajul Conflict în listă."
 
 #: includes/Admin/Strings.php:74
 msgid "Something went wrong. Please try again."
-msgstr ""
+msgstr "A apărut o eroare. Încearcă din nou."
 
 #: includes/Admin/Strings.php:76
 msgid "Discard unsaved changes?"
-msgstr ""
+msgstr "Renunți la modificările nesalvate?"
 
 #: includes/Admin/Strings.php:77
 msgid "Your changes have not been saved."
-msgstr ""
+msgstr "Modificările tale nu au fost salvate."
 
 #: includes/Admin/Strings.php:78
 msgid "Discard changes"
-msgstr ""
+msgstr "Renunță la modificări"
 
 #: includes/Admin/Strings.php:79
 msgid "Keep editing"
-msgstr ""
+msgstr "Continuă editarea"
 
 #: includes/Admin/Strings.php:80
 msgid "Reload rules"
-msgstr ""
+msgstr "Reîncarcă regulile"
 
 #: includes/Admin/Strings.php:81
 msgid "Commission amount"
-msgstr ""
+msgstr "Valoarea comisionului"
 
 #: includes/Admin/Strings.php:82
 msgid "Commission type"
-msgstr ""
+msgstr "Tipul comisionului"
 
 #: includes/Admin/Strings.php:85
 msgid "Close this dialog"
-msgstr ""
+msgstr "Închide fereastra"
 
 #: includes/Admin/Strings.php:86
 msgid "Use the arrow keys and Enter to select a day."
-msgstr ""
+msgstr "Folosește tastele săgeată și Enter pentru a selecta o zi."
 
 #: includes/Admin/Strings.php:87
 msgid "Use the arrow keys and Enter to select a month."
-msgstr ""
+msgstr "Folosește tastele săgeată și Enter pentru a selecta o lună."
 
 #: includes/Admin/Strings.php:88
 msgid "Use the arrow keys and Enter to select a year."
-msgstr ""
+msgstr "Folosește tastele săgeată și Enter pentru a selecta un an."
 
 #: includes/Admin/Strings.php:89
 msgid "Selected date"
-msgstr ""
+msgstr "Data selectată"
 
 #: includes/Admin/Strings.php:90
 msgid "Week"
-msgstr ""
+msgstr "Săptămână"
 
 #: includes/Admin/Strings.php:91
 msgid "Decrease number"
-msgstr ""
+msgstr "Micșorează numărul"
 
 #: includes/Admin/Strings.php:92
 msgid "Increase number"
-msgstr ""
+msgstr "Mărește numărul"
 
 #: includes/Admin/Strings.php:93
 msgid "Toggle menu"
-msgstr ""
+msgstr "Deschide sau închide meniul"
 
 #: includes/Admin/Strings.php:94
 msgid "Sunday"
-msgstr ""
+msgstr "Duminică"
 
 #: includes/Admin/Strings.php:95
 msgid "Monday"
-msgstr ""
+msgstr "Luni"
 
 #: includes/Admin/Strings.php:96
 msgid "Tuesday"
-msgstr ""
+msgstr "Marți"
 
 #: includes/Admin/Strings.php:97
 msgid "Wednesday"
-msgstr ""
+msgstr "Miercuri"
 
 #: includes/Admin/Strings.php:98
 msgid "Thursday"
-msgstr ""
+msgstr "Joi"
 
 #: includes/Admin/Strings.php:99
 msgid "Friday"
-msgstr ""
+msgstr "Vineri"
 
 #: includes/Admin/Strings.php:100
 msgid "Saturday"
-msgstr ""
+msgstr "Sâmbătă"
 
 #: includes/Admin/Strings.php:103
 msgid "Add commission rule"
-msgstr ""
+msgstr "Adaugă regulă de comision"
 
 #: includes/Admin/Strings.php:104
 msgid "Edit commission rule"
-msgstr ""
+msgstr "Editează regula de comision"
 
 #: includes/Admin/Strings.php:105
 msgid "Applies to"
-msgstr ""
+msgstr "Se aplică pentru"
 
 #: includes/Admin/Strings.php:106
 msgid "For the products"
-msgstr ""
+msgstr "Pentru produsele"
 
 #: includes/Admin/Strings.php:107
 msgid "Commission"
-msgstr ""
+msgstr "Comision"
 
 #: includes/Admin/Strings.php:108
 msgid "Active period"
-msgstr ""
+msgstr "Perioada de valabilitate"
 
 #: includes/Admin/Strings.php:109
 msgid "Internal note"
-msgstr ""
+msgstr "Notă internă"
 
 #: includes/Admin/Strings.php:111
 msgid "An affiliate group"
-msgstr ""
+msgstr "Un grup de afiliați"
 
 #: includes/Admin/Strings.php:112
 msgid "One affiliate"
-msgstr ""
+msgstr "Un afiliat"
 
 #: includes/Admin/Strings.php:113
 msgid "Choose a group"
-msgstr ""
+msgstr "Alege un grup"
 
 #: includes/Admin/Strings.php:114
 msgid "Choose an affiliate"
-msgstr ""
+msgstr "Alege un afiliat"
 
 #: includes/Admin/Strings.php:116
 msgid "A product category"
-msgstr ""
+msgstr "O categorie de produse"
 
 #: includes/Admin/Strings.php:117
 msgid "A product or variation"
-msgstr ""
+msgstr "Un produs sau o variație"
 
 #: includes/Admin/Strings.php:118
 msgid "Choose categories"
-msgstr ""
+msgstr "Alege categoriile"
 
 #: includes/Admin/Strings.php:119
 msgid "Search for a product or variation…"
-msgstr ""
+msgstr "Caută un produs sau o variație…"
 
 #: includes/Admin/Strings.php:120
 msgid "Type at least two characters"
-msgstr ""
+msgstr "Introdu cel puțin două caractere"
 
 #: includes/Admin/Strings.php:121
 msgid "No products found"
-msgstr ""
+msgstr "Nu s-au găsit produse"
 
 #: includes/Admin/Strings.php:122
 msgid "% of the line total"
-msgstr ""
+msgstr "% din valoarea liniei"
 
 #: includes/Admin/Strings.php:123
 msgid "flat, per order line"
-msgstr ""
+msgstr "sumă fixă per linie de comandă"
 
 #: includes/Admin/Strings.php:124
-msgid "Applied per matching order line, to the same line totals Fluent Affiliate commissions — so your tax and shipping settings are respected."
+msgid ""
+"Applied per matching order line, to the same line totals Fluent Affiliate "
+"commissions — so your tax and shipping settings are respected."
 msgstr ""
+"Se aplică fiecărei linii de comandă potrivite, folosind valorile pentru care"
+" Fluent Affiliate calculează comisionul — sunt respectate setările pentru "
+"taxe și livrare."
 
 #: includes/Admin/Strings.php:125
 msgid "From"
-msgstr ""
+msgstr "De la"
 
 #: includes/Admin/Strings.php:126
 msgid "Until"
-msgstr ""
+msgstr "Până la"
 
 #: includes/Admin/Strings.php:127
 msgid "First 12 months"
-msgstr ""
+msgstr "Primele 12 luni"
 
 #: includes/Admin/Strings.php:128
 msgid "Leave both empty for a rule that never expires."
-msgstr ""
+msgstr "Lasă ambele câmpuri goale pentru o regulă fără termen de expirare."
 
 #: includes/Admin/Strings.php:129
 msgid "Visible to administrators only."
-msgstr ""
+msgstr "Vizibilă doar administratorilor."
 
 #: includes/Admin/Strings.php:133
 msgid "Result:"
-msgstr ""
+msgstr "Rezultat:"
 
 #: includes/Admin/Strings.php:134
 msgid "Save rule"
-msgstr ""
+msgstr "Salvează regula"
 
-#. translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s: the rate (e.g. "10%"), %3$s: what it covers (e.g. "Headphones")
+#. translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s:
+#. the rate (e.g. "10%"), %3$s: what it covers (e.g. "Headphones")
 #: includes/Admin/Strings.php:139
-#, php-format
 msgid "%1$s earns %2$s on %3$s."
-msgstr ""
+msgstr "%1$s: %2$s pentru %3$s."
 
 #. translators: %s: the start date the rule takes effect
 #: includes/Admin/Strings.php:141
-#, php-format
 msgid " From %s."
-msgstr ""
+msgstr " Din %s."
 
 #. translators: %s: the date the rule stops applying
 #: includes/Admin/Strings.php:143
-#, php-format
 msgid " Until %s."
-msgstr ""
+msgstr " Până la %s."
 
 #. translators: %1$s: start date, %2$s: end date
 #: includes/Admin/Strings.php:145
-#, php-format
 msgid " From %1$s to %2$s."
-msgstr ""
+msgstr " Din %1$s până la %2$s."
 
 #: includes/Admin/Strings.php:147
 msgid "This group"
-msgstr ""
+msgstr "Acest grup"
 
 #: includes/Admin/Strings.php:148
 msgid "This affiliate"
-msgstr ""
+msgstr "Acest afiliat"
 
 #: includes/Admin/Strings.php:149
 msgid "all products"
-msgstr ""
+msgstr "toate produsele"
 
 #: includes/Admin/Strings.php:150
 msgid "the chosen categories"
-msgstr ""
+msgstr "categoriile alese"
 
 #: includes/Admin/Strings.php:151
 msgid "the chosen products"
-msgstr ""
+msgstr "produsele alese"
 
-#. translators: %s: a flat commission amount, per order line, already in store currency
-#: includes/Admin/Strings.php:153
-#: includes/Labels.php:104
-#, php-format
+#. translators: %s: a flat commission amount, per order line, already in store
+#. currency
+#: includes/Admin/Strings.php:153 includes/Labels.php:104
 msgid "%s per order line"
-msgstr ""
+msgstr "%s per linie de comandă"
 
 #: includes/Admin/Widgets.php:46
 msgid "Individual"
-msgstr ""
+msgstr "Individuală"
 
-#: includes/Admin/Widgets.php:84
-#: includes/Admin/Widgets.php:138
-msgid "Higher-priority rules take precedence; rates do not stack. The final rate depends on the products and referral type. Fluent global rows apply to initial sales only."
+#: includes/Admin/Widgets.php:84 includes/Admin/Widgets.php:138
+msgid ""
+"Higher-priority rules take precedence; rates do not stack. The final rate "
+"depends on the products and referral type. Fluent global rows apply to "
+"initial sales only."
 msgstr ""
+"Regulile cu prioritate mai mare au întâietate; ratele nu se cumulează. Rata "
+"finală depinde de produse și de tipul recomandării. Ratele globale Fluent se"
+" aplică doar vânzărilor inițiale."
 
 #: includes/Admin/Widgets.php:90
 msgid "Source"
-msgstr ""
+msgstr "Sursă"
 
 #: includes/Admin/Widgets.php:92
-msgid "No commission rules apply to this affiliate. They earn the inherited rate."
+msgid ""
+"No commission rules apply to this affiliate. They earn the inherited rate."
 msgstr ""
+"Acestui afiliat nu i se aplică nicio regulă de comision. Se aplică rata "
+"moștenită."
 
 #: includes/Admin/Widgets.php:99
 msgid "Add rule for this affiliate"
-msgstr ""
+msgstr "Adaugă regulă pentru acest afiliat"
 
 #: includes/Admin/Widgets.php:132
 msgid "(Fluent global rate; initial sales only.)"
-msgstr ""
+msgstr "(Rată globală Fluent; doar pentru vânzările inițiale.)"
 
 #: includes/Admin/Widgets.php:137
 msgid "Your commission rules"
-msgstr ""
+msgstr "Regulile tale de comision"
 
 #: includes/Admin/Widgets.php:146
 msgid "on commissionable product-line totals"
-msgstr ""
+msgstr "pentru valorile liniilor de produse eligibile pentru comision"
 
 #. translators: %s: the products or categories the rate covers
 #: includes/Admin/Widgets.php:149
-#, php-format
 msgid "on %s"
-msgstr ""
+msgstr "pentru %s"
 
-#. translators: 1: commission rate, 2: what it applies to, 3: the last day it applies
+#. translators: 1: commission rate, 2: what it applies to, 3: the last day it
+#. applies
 #: includes/Admin/Widgets.php:156
-#, php-format
 msgid "When this rule takes precedence: %1$s %2$s, until %3$s."
-msgstr ""
+msgstr "Când această regulă are prioritate: %1$s %2$s, până la %3$s."
 
 #. translators: 1: commission rate, 2: what it applies to
 #: includes/Admin/Widgets.php:165
-#, php-format
 msgid "When this rule takes precedence: %1$s %2$s."
-msgstr ""
+msgstr "Când această regulă are prioritate: %1$s %2$s."
 
 #. translators: %d: affiliate group id
 #: includes/Fluent.php:108
-#, php-format
 msgid "Group #%d"
-msgstr ""
+msgstr "Grupul #%d"
 
 #. translators: %d: affiliate id
 #: includes/Fluent.php:132
-#, php-format
 msgid "Affiliate #%d"
-msgstr ""
+msgstr "Afiliatul #%d"
 
 #. translators: %s: affiliate name and id
 #: includes/Labels.php:38
-#, php-format
 msgid "Affiliate: %s"
-msgstr ""
+msgstr "Afiliat: %s"
 
 #. translators: %s: affiliate group name
 #: includes/Labels.php:44
-#, php-format
 msgid "Group: %s"
-msgstr ""
+msgstr "Grup: %s"
 
 #. translators: %s: comma-separated product category names
 #: includes/Labels.php:87
-#, php-format
 msgid "Category: %s"
-msgstr ""
+msgstr "Categorie: %s"
 
 #. translators: %s: comma-separated product or variation names
 #: includes/Labels.php:92
-#, php-format
 msgid "Product: %s"
-msgstr ""
+msgstr "Produs: %s"
 
 #: includes/Labels.php:120
 msgid "Always"
-msgstr ""
+msgstr "Permanent"
 
 #. translators: 1: start date, 2: end date
 #: includes/Labels.php:125
-#, php-format
 msgid "%1$s to %2$s"
-msgstr ""
+msgstr "Din %1$s până la %2$s"
 
 #. translators: %s: start date
 #: includes/Labels.php:133
-#, php-format
 msgid "From %s"
-msgstr ""
+msgstr "Din %s"
 
 #. translators: %s: end date
 #: includes/Labels.php:138
-#, php-format
 msgid "Until %s"
-msgstr ""
+msgstr "Până la %s"
 
 #. translators: 1: rate, 2: what the rate applies to, 3: the date window
 #: includes/Labels.php:147
-#, php-format
 msgid "%1$s on %2$s (%3$s)"
-msgstr ""
+msgstr "%1$s pentru %2$s (%3$s)"
 
 #. translators: %s: minimum Fluent Affiliate version
 #: includes/Plugin.php:52
-#, php-format
-msgid "Commission Rules for Fluent Affiliate needs Fluent Affiliate %s or newer to be installed and active."
+msgid ""
+"Commission Rules for Fluent Affiliate needs Fluent Affiliate %s or newer to "
+"be installed and active."
 msgstr ""
+"Reguli de comision pentru Fluent Affiliate necesită instalarea și activarea "
+"Fluent Affiliate %s sau a unei versiuni mai noi."
 
 #: includes/Rest/Controller.php:76
 msgid "Reload the rules before making changes."
-msgstr ""
+msgstr "Reîncarcă regulile înainte de a face modificări."
 
 #: includes/Rest/Controller.php:132
 msgid "Type at least two characters to search."
-msgstr ""
+msgstr "Introdu cel puțin două caractere pentru căutare."
 
-#: includes/Rest/Controller.php:213
-#: includes/Rest/Controller.php:328
+#: includes/Rest/Controller.php:213 includes/Rest/Controller.php:328
 msgid "That rule no longer exists."
-msgstr ""
+msgstr "Această regulă nu mai există."
 
-#. translators: shown under one field of the rule editor when the submitted value could not be read at all.
+#. translators: shown under one field of the rule editor when the submitted
+#. value could not be read at all.
 #: includes/Rest/Controller.php:283
 msgid "Invalid value."
-msgstr ""
+msgstr "Valoare nevalidă."
 
 #: includes/Rest/Controller.php:342
 msgid "Unknown bulk action."
-msgstr ""
+msgstr "Acțiune în masă necunoscută."
 
 #. translators: %d: number of rules changed by a bulk action.
 #: includes/Rest/Controller.php:368
-#, php-format
 msgid "%d rule updated."
 msgid_plural "%d rules updated."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%d regulă actualizată."
+msgstr[1] "%d reguli actualizate."
+msgstr[2] "%d de reguli actualizate."
 
 #: includes/Store.php:45
 msgid "Commission rules are being updated. Please try again."
-msgstr ""
+msgstr "Regulile de comision sunt în curs de actualizare. Încearcă din nou."
 
 #: includes/Store.php:50
-msgid "Commission rules changed in another session. Reload the rules and try again."
+msgid ""
+"Commission rules changed in another session. Reload the rules and try again."
 msgstr ""
+"Regulile de comision s-au schimbat într-o altă sesiune. Reîncarcă regulile "
+"și încearcă din nou."
 
 #: includes/Store.php:183
 msgid "Choose an affiliate group."
-msgstr ""
+msgstr "Alege un grup de afiliați."
 
 #: includes/Store.php:184
 msgid "Choose an affiliate."
-msgstr ""
+msgstr "Alege un afiliat."
 
 #: includes/Store.php:186
 msgid "That affiliate no longer exists."
-msgstr ""
+msgstr "Acest afiliat nu mai există."
 
 #: includes/Store.php:188
 msgid "That affiliate group no longer exists."
-msgstr ""
+msgstr "Acest grup de afiliați nu mai există."
 
 #: includes/Store.php:198
 msgid "A rule for all products cannot also name products or categories."
 msgstr ""
+"O regulă pentru toate produsele nu poate specifica și produse sau categorii."
 
 #: includes/Store.php:201
 msgid "Choose at least one product category."
-msgstr ""
+msgstr "Alege cel puțin o categorie de produse."
 
 #: includes/Store.php:202
 msgid "Choose at least one product or variation."
-msgstr ""
+msgstr "Alege cel puțin un produs sau o variație."
 
 #. translators: %s: comma-separated list of ids that could not be found
 #: includes/Store.php:214
-#, php-format
 msgid "This no longer exists: %s."
 msgid_plural "These no longer exist: %s."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Acest element nu mai există: %s."
+msgstr[1] "Aceste elemente nu mai există: %s."
+msgstr[2] "Aceste elemente nu mai există: %s."
 
 #: includes/Store.php:229
 msgid "Enter a commission rate."
-msgstr ""
+msgstr "Introdu o rată de comision."
 
 #: includes/Store.php:233
 msgid "The rate must be a finite number up to 1,000,000."
-msgstr ""
+msgstr "Rata trebuie să fie un număr finit de cel mult 1.000.000."
 
 #: includes/Store.php:235
 msgid "The rate cannot be negative."
-msgstr ""
+msgstr "Rata nu poate fi negativă."
 
 #: includes/Store.php:237
 msgid "A percentage rate cannot be above 100."
-msgstr ""
+msgstr "O rată procentuală nu poate depăși 100."
 
-#: includes/Store.php:243
-#: includes/Store.php:246
+#: includes/Store.php:243 includes/Store.php:246
 msgid "Use the YYYY-MM-DD date format."
-msgstr ""
+msgstr "Folosește formatul de dată AAAA-LL-ZZ."
 
 #: includes/Store.php:249
 msgid "The end date must not be before the start date."
-msgstr ""
+msgstr "Data de încheiere nu poate fi anterioară datei de început."

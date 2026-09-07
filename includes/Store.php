@@ -16,12 +16,47 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Store {
   /** Shape version of the audit stamp written onto each referral. */
-  public const STAMP_VERSION = 1;
+  public const STAMP_VERSION = 2;
 
   public const SCOPES  = [ 'all', 'group', 'affiliate' ];
   public const TARGETS = [ 'all', 'category', 'product' ];
   public const STATUSES = [ 'active', 'inactive' ];
   public const RATE_TYPES = [ 'percentage', 'flat' ];
+
+  private static bool $mutating = false;
+
+  /** Opaque collection revision used by the editor's If-Match header. */
+  public static function revision( ?array $rules = null ): string {
+    return hash( 'sha256', (string) wp_json_encode( $rules ?? self::all() ) );
+  }
+
+  /**
+   * Serialize mutations, including deletion hooks, on this site's collection.
+   * A database lock works across workers and does not depend on object caching.
+   * @return mixed|\WP_Error
+   */
+  public static function mutate( callable $callback, ?string $revision = null ) {
+    if ( self::$mutating ) {
+      return $callback();
+    }
+    global $wpdb;
+    // ponytail: one lock per site; partition storage if admin write contention becomes material.
+    $lock = 'facr:' . hash( 'sha224', DB_NAME . ':' . $wpdb->prefix );
+    if ( (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) ) !== '1' ) {
+      return new \WP_Error( 'facr_busy', __( 'Commission rules are being updated. Please try again.', 'fa-commission-rules' ), [ 'status' => 503 ] );
+    }
+    try {
+      \FluentAffiliate\App\Helper\Utility::forgetCache( 'option_' . FACR_RULES_KEY );
+      if ( $revision !== null && ! hash_equals( self::revision(), $revision ) ) {
+        return new \WP_Error( 'facr_conflict', __( 'Commission rules changed in another session. Reload the rules and try again.', 'fa-commission-rules' ), [ 'status' => 409 ] );
+      }
+      self::$mutating = true;
+      return $callback();
+    } finally {
+      self::$mutating = false;
+      $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+    }
+  }
 
   /** @return array<int,array<string,mixed>> newest first */
   public static function all(): array {
@@ -240,7 +275,10 @@ final class Store {
   }
 
   /** @param array<string,mixed> $rule */
-  public static function save( array $rule ): void {
+  public static function save( array $rule ) {
+    if ( ! self::$mutating ) {
+      return self::mutate( static fn() => self::save( $rule ) );
+    }
     if ( strncmp( (string) $rule['id'], 'fluent:', 7 ) === 0 ) {
       return; // Fluent's own rows are read-only by construction.
     }
@@ -259,7 +297,10 @@ final class Store {
     self::persist( $rules );
   }
 
-  public static function delete( string $id ): bool {
+  public static function delete( string $id ) {
+    if ( ! self::$mutating ) {
+      return self::mutate( static fn() => self::delete( $id ) );
+    }
     $rules = self::all();
     $kept  = array_values( array_filter( $rules, static fn( array $rule ): bool => (string) $rule['id'] !== $id ) );
     if ( count( $kept ) === count( $rules ) ) {
@@ -270,7 +311,10 @@ final class Store {
   }
 
   /** @param string[] $ids */
-  public static function delete_many( array $ids ): int {
+  public static function delete_many( array $ids ) {
+    if ( ! self::$mutating ) {
+      return self::mutate( static fn() => self::delete_many( $ids ) );
+    }
     $ids     = array_map( 'strval', $ids );
     $rules   = self::all();
     $kept    = array_values( array_filter( $rules, static fn( array $rule ): bool => ! in_array( (string) $rule['id'], $ids, true ) ) );
@@ -282,7 +326,10 @@ final class Store {
   }
 
   /** @param string[] $ids */
-  public static function set_status( array $ids, string $status ): int {
+  public static function set_status( array $ids, string $status ) {
+    if ( ! self::$mutating ) {
+      return self::mutate( static fn() => self::set_status( $ids, $status ) );
+    }
     if ( ! in_array( $status, self::STATUSES, true ) ) {
       return 0;
     }
@@ -321,6 +368,13 @@ final class Store {
   }
 
   private static function forget( string $scope_type, int $scope_id ): void {
+    if ( ! self::$mutating ) {
+      $result = self::mutate( static fn() => self::forget( $scope_type, $scope_id ) );
+      if ( is_wp_error( $result ) ) {
+        error_log( 'Commission Rules: ' . $result->get_error_message() );
+      }
+      return;
+    }
     if ( $scope_id <= 0 ) {
       return;
     }

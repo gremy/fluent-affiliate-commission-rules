@@ -2,9 +2,9 @@
 Contributors: webbership
 Tags: affiliate, commission, fluent affiliate, woocommerce, referrals
 Requires at least: 6.6
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,7 +32,7 @@ Fluent's own site-wide product/category rates are not copied. They are read live
 
 Every referral it touches carries an audit stamp, plus a short note appended to the description so the reason shows up in Fluent's CSV export.
 
-The affiliate profile card and the affiliate portal card both show only the rules currently in force, one row per target, naming the Source (Individual, Group or Everyone) of the rule that actually won.
+The affiliate profile and portal show eligible rules, suppress fully covered targets and qualify partial coverage. Higher-priority rules take precedence; rates do not stack. Native global rates apply to initial sales only on these cards.
 
 The rules screen is a Vue 3 + Element Plus app mounted inside Fluent Affiliate's own admin chrome, styled by Fluent's own stylesheets so it looks and behaves like one of their screens, including dark mode. It lives on a page of its own because Fluent Affiliate's compiled admin app has no module contract for third-party screens (FluentCRM's `fluentcrm_global_routes` and import-map contract is the model). Data moves over a small REST API (`fa-commission-rules/v1`) gated on Fluent's manage_all_data permission.
 
@@ -68,7 +68,7 @@ Two rules are refused rather than silently discarded: one whose id no longer exi
 
 = The commission on a renewal is slightly off when my base rate is a flat amount. =
 
-Renewals are priced from Fluent's own exact per-affiliate renewal rate wherever that is reachable, so the flat case is exact there, never prorated. Only when that route can't be reached does this plugin fall back to deriving the base rate for the unclaimed remainder by scaling Fluent's own figure by remainder / order total. That is exact for a percentage base rate; for a flat one it is a deliberate reading, because a flat rate is a per-order amount and only the share belonging to the unclaimed part of the order should be paid. It is never paid twice.
+This add-on prorates the whole-order base commission by remainder / order total for sales, renewals and lifetime referrals. With a flat base of 50 on a 150 order with 50 unmatched, the base contribution is 16.67. This preserves the add-on's existing policy; native Fluent instead pays the full flat base on a nonzero remainder. Native flat product/category rows keep their own per-line behavior.
 
 = The docs say `fluent_affiliate/recurring_commission` filters an array, but I get a float. =
 
@@ -82,7 +82,7 @@ Installed 1.6.5 passes only affiliate, order_data, provider and vendor_order, an
 
 Fluent Affiliate exposes no public API for commission pricing, so a few internals are read directly: `RecurringReferral::getBaseRenewalCommission()` and `LifetimeCommissionHandler::getBaseLifetimeCommission()` (Pro) for Fluent's own base rate on renewals and lifetime sales; the `_woo_connector_config` option (its `custom_affiliate_rate(s)` and `renewal_*` gates and rate rows, plus the `watched_product_ids` / `watched_cat_ids` lists) for Fluent's global rate table, which is read live and never copied; the `order_total` and `products` keys of the `fluent_affiliate/referral_data` payload for the order lines; priority 10 of Pro's lifetime handler on that same filter, which is why this plugin hooks it at 20; and the float payload of `fluent_affiliate/recurring_commission`.
 
-None of them can produce a wrong payout if it changes. Where a base-rate method is unreachable the plugin falls back to a documented, conservative figure instead of guessing, and every touched referral's audit stamp records the remainder and exactly what was paid on it. Where anything else changes, the worst case is that Fluent's global rows stop being surfaced here, or that no rule engages at all and Fluent's own pricing stands untouched.
+This integration is verified against Fluent Affiliate and Pro 1.6.5. Upstream changes to those internals require compatibility testing. The audit stamp records the calculation, not a guarantee of compatibility with future releases.
 
 One detail worth knowing when reading old audit stamps: the synthetic `fluent:<n>` ids for Fluent's own global rows are position-based — `<n>` is the row's index in the connector option's rate table, so reordering that table in Fluent's settings renumbers them.
 
@@ -91,6 +91,14 @@ One detail worth knowing when reading old audit stamps: the synthetic `fluent:<n
 No. Pro is needed for affiliate groups, lifetime commissions and the WooCommerce integration. Without Pro, the group scope is hidden and everything else works.
 
 == Changelog ==
+
+= 1.2.0 =
+* Preserve native global rate order and matching on untouched lines; exclude sale tables from lifetime referrals.
+* Correct overlapping portal coverage and qualify partial coverage.
+* Reconcile audit amounts while retaining unrounded calculations.
+* Require If-Match revisions and serialize writes to prevent lost updates.
+* Add accessible field names, unsaved-edit protection, request-state fixes and Romanian catalogs/locale.
+* Clarify inherited-rate and flat-base behavior.
 
 = 1.1.0 =
 * The Commission Rules screen is now a Vue 3 + Element Plus app inside Fluent Affiliate's own admin chrome, with a rule editor drawer, remote product search and dark mode.

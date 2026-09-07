@@ -7,22 +7,11 @@ defined( 'ABSPATH' ) || exit;
 
 use FACommissionRules\Fluent;
 use FACommissionRules\Labels;
+use FACommissionRules\LineBuilder;
 use FACommissionRules\Resolver;
 use FACommissionRules\Store;
 
-/**
- * Two read-only surfaces: a card on the admin affiliate profile, and the rate
- * card the affiliate portal has never had. Fluent shows an affiliate their own
- * commission rate nowhere today, which is the single biggest source of partner
- * disputes on a time-boxed rate.
- *
- * Both surfaces show one rule per distinct target: an affiliate with an own
- * "all products 15%" rule and a group "all products 10%" rule only ever gets
- * paid on the own rule, so that is the only one advertised. Resolver::effective()
- * does the collapsing with the same specificity order that decides real money.
- *
- * @package FACommissionRules
- */
+/** Read-only rule summaries on the affiliate profile and portal. */
 final class Widgets {
   public function register(): void {
     add_filter( 'fluent_affiliate/affiliate_widgets', [ $this, 'affiliate_widget' ], 10, 2 );
@@ -77,7 +66,8 @@ final class Widgets {
     $rules        = Resolver::effective(
       self::rules_for_affiliate( $affiliate_id, $group_id ),
       [ 'affiliate_id' => $affiliate_id, 'group_id' => $group_id ],
-      current_time( 'Y-m-d' )
+      current_time( 'Y-m-d' ),
+      [ LineBuilder::class, 'target_line' ]
     );
 
     $rows = '';
@@ -91,6 +81,7 @@ final class Widgets {
       );
     }
 
+    $guidance = '<p>' . esc_html__( 'Higher-priority rules take precedence; rates do not stack. The final rate depends on the products and referral type. Fluent global rows apply to initial sales only.', 'fa-commission-rules' ) . '</p>';
     $content = $rows !== ''
       ? '<table class="widefat striped"><thead><tr>'
         . '<th>' . esc_html__( 'For what', 'fa-commission-rules' ) . '</th>'
@@ -107,7 +98,7 @@ final class Widgets {
         esc_url( Menu::page_url( [ 'action' => 'add', 'affiliate_id' => (string) $affiliate_id ] ) ),
         esc_html__( 'Add rule for this affiliate', 'fa-commission-rules' )
       ),
-      'content' => $content,
+      'content' => $guidance . $content,
     ];
 
     return $widgets;
@@ -124,17 +115,12 @@ final class Widgets {
       return $html;
     }
 
-    // The same filter the money uses: status, date window and scope together,
-    // collapsed to one rule per target so a rule that never pays (shadowed by
-    // a more specific one of the affiliate's own) is never advertised.
-    // Telling an affiliate they earn 10% on a rule that expired last month, or
-    // showing two contradictory rates for the same products, is exactly the
-    // dispute this card exists to prevent.
     $group_id = (int) ( $affiliate->group_id ?? 0 );
     $rules    = Resolver::effective(
       self::rules_for_affiliate( (int) $affiliate->id, $group_id ),
       [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => $group_id ],
-      current_time( 'Y-m-d' )
+      current_time( 'Y-m-d' ),
+      [ LineBuilder::class, 'target_line' ]
     );
     if ( ! $rules ) {
       return $html;
@@ -142,12 +128,14 @@ final class Widgets {
 
     $items = '';
     foreach ( $rules as $rule ) {
-      $items .= '<li>' . esc_html( self::plain_sentence( $rule ) ) . '</li>';
+      $items .= '<li>' . esc_html( self::plain_sentence( $rule ) )
+        . ( ! empty( $rule['readonly'] ) ? ' ' . esc_html__( '(Fluent global rate; initial sales only.)', 'fa-commission-rules' ) : '' ) . '</li>';
     }
 
     return $html
       . '<div class="fa-commission-rules-card">'
-      . '<h4>' . esc_html__( 'Your commission', 'fa-commission-rules' ) . '</h4>'
+      . '<h4>' . esc_html__( 'Your commission rules', 'fa-commission-rules' ) . '</h4>'
+      . '<p>' . esc_html__( 'Higher-priority rules take precedence; rates do not stack. The final rate depends on the products and referral type. Fluent global rows apply to initial sales only.', 'fa-commission-rules' ) . '</p>'
       . '<ul>' . $items . '</ul>'
       . '</div>';
   }
@@ -155,7 +143,7 @@ final class Widgets {
   /** Plain language, no admin vocabulary, and the end date always spelled out. */
   private static function plain_sentence( array $rule ): string {
     $scope = $rule['target_type'] === 'all'
-      ? __( 'on the net value of your orders', 'fa-commission-rules' )
+      ? __( 'on commissionable product-line totals', 'fa-commission-rules' )
       : sprintf(
         /* translators: %s: the products or categories the rate covers */
         __( 'on %s', 'fa-commission-rules' ),
@@ -165,7 +153,7 @@ final class Widgets {
     if ( (string) $rule['ends_at'] !== '' ) {
       return sprintf(
         /* translators: 1: commission rate, 2: what it applies to, 3: the last day it applies */
-        __( 'You earn %1$s %2$s, until %3$s.', 'fa-commission-rules' ),
+        __( 'When this rule takes precedence: %1$s %2$s, until %3$s.', 'fa-commission-rules' ),
         Labels::rate_label( $rule ),
         $scope,
         Labels::show_date( (string) $rule['ends_at'] )
@@ -174,7 +162,7 @@ final class Widgets {
 
     return sprintf(
       /* translators: 1: commission rate, 2: what it applies to */
-      __( 'You earn %1$s %2$s.', 'fa-commission-rules' ),
+      __( 'When this rule takes precedence: %1$s %2$s.', 'fa-commission-rules' ),
       Labels::rate_label( $rule ),
       $scope
     );

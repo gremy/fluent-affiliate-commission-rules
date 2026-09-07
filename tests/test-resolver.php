@@ -306,7 +306,7 @@ $rules = [
 $eff     = Resolver::effective( $rules, $ctx, $now );
 $eff_ids = array_map( static fn( array $r ): string => (string) $r['id'], $eff );
 sort( $eff_ids );
-facr_rt( 'effective(): rules on different targets are both kept', $eff_ids === [ 'grp-cat', 'own-all' ] );
+facr_rt( 'effective(): an affiliate all-products rule suppresses the group category rate', $eff_ids === [ 'own-all' ] );
 
 // 21. A flat rate on a line that sold nothing pays nothing. The line is still
 // claimed by the rule — it just is not worth anything — so the untouched part of

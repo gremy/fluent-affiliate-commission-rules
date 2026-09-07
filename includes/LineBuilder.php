@@ -67,6 +67,24 @@ final class LineBuilder {
     return $lines;
   }
 
+  /** Catalog probe for rule summaries; it never prices a real order. */
+  public static function target_line( array $rule, int $id ): array {
+    if ( $rule['target_type'] === 'product' ) {
+      $product = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
+      $parent = $product ? (int) $product->get_parent_id() : 0;
+      return self::line( $parent ?: $id, $parent ? $id : 0, 0.0, taxonomy_exists( 'product_cat' ) );
+    }
+    $line = self::whole_order_line( 0.0 );
+    if ( $rule['target_type'] === 'category' ) {
+      $line['term_depths'] = [ $id => 0 ];
+      foreach ( get_ancestors( $id, 'product_cat', 'taxonomy' ) as $depth => $parent ) {
+        $line['term_depths'][ (int) $parent ] = $depth + 1;
+      }
+      $line['term_ids'] = array_keys( $line['term_depths'] );
+    }
+    return $line;
+  }
+
   /**
    * The one line that stands in for an entire order when no items are known.
    *

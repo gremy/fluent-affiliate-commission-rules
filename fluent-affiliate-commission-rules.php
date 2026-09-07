@@ -3,9 +3,9 @@
  * Plugin Name:       Commission Rules for Fluent Affiliate
  * Plugin URI:        https://github.com/gremy/fluent-affiliate-commission-rules
  * Description:       Per-affiliate and per-group commission rules for Fluent Affiliate, targeted at a product, a product category, or everything, with an optional date window.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 6.6
- * Tested up to:      6.8
+ * Tested up to:      7.1
  * Requires PHP:      8.1
  * Requires Plugins:  fluent-affiliate
  * Author:            Webbership
@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
 define( 'FACR_FILE', __FILE__ );
 define( 'FACR_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FACR_URL', plugin_dir_url( __FILE__ ) );
-define( 'FACR_VERSION', '1.1.0' );
+define( 'FACR_VERSION', '1.2.0' );
 define( 'FACR_RULES_KEY', '_fa_commission_rules' );
 define( 'FACR_PAGE', 'fa-commission-rules' );
 
