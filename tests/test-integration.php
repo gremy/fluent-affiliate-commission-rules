@@ -917,6 +917,64 @@ try {
     echo "SKIP WooCommerce inactive: widget Everyone rule not exercised\n";
   }
 
+  // Exercise customer segmentation through real WooCommerce orders and both hook paths.
+  foreach ( ['b2b' => 3, 'b2c' => 10] as $segment => $rate ) {
+    [$segment_rule, $errors] = Store::validate(['scope_type'=>'all', 'customer_type'=>$segment, 'rate'=>$rate]);
+    facr_it("$segment rule validates", !$errors);
+    Store::save($segment_rule);
+  }
+  $segment_order = wc_create_order();
+  if ( is_wp_error($segment_order) ) { throw new RuntimeException($segment_order->get_error_message()); }
+  $previous_user = get_current_user_id();
+  try {
+    $segment_order->add_product(wc_get_product($facr_product_id), 1, ['subtotal'=>100, 'total'=>100]);
+    $segment_order->set_total(100);
+    $segment_order->save();
+    $hook = new \FACommissionRules\ReferralHooks();
+    $segment_payload = array_merge($facr_payload, ['provider_id'=>$segment_order->get_id(), 'order_total'=>100, 'amount'=>19]);
+    foreach (['b2b'=>3.0, 'b2c'=>10.0] as $segment => $expected) {
+      $segment_order->update_meta_data('b2bking_is_b2b_order', $segment === 'b2b' ? 'yes' : 'no');
+      $segment_order->save_meta_data();
+      foreach (['sale','payment','lifetime_sale'] as $type) {
+        $out = $hook->filter_referral_data(array_merge($segment_payload, ['type'=>$type]), 'woo');
+        facr_it("$type uses $segment order rate", $out['amount'] === $expected && $out['settings']['fa_commission_rules']['customer_type'] === $segment);
+      }
+      $renewal_context = ['affiliate'=>Fluent::affiliate($facr_aff_id), 'provider'=>'woo', 'vendor_order'=>$segment_order, 'order_data'=>['id'=>$segment_order->get_id(), 'referral_order_total'=>100]];
+      $out = $hook->filter_recurring_commission(19.0, $renewal_context);
+      facr_it("renewal uses $segment order rate", $out === $expected);
+      $stamped = $hook->filter_referral_data(array_merge($segment_payload, ['type'=>'recurring_sale', 'amount'=>$out]), 'woo');
+      facr_it("renewal audit keeps $segment classification", $stamped['settings']['fa_commission_rules']['customer_type'] === $segment);
+    }
+    $out = $hook->filter_referral_data($segment_payload, 'another-provider');
+    facr_it('other provider cannot acquire a Woo customer segment by matching order ID', $out === $segment_payload);
+    facr_it('missing Woo order has unknown customer type', \FACommissionRules\LineBuilder::customer_type('woo', 0) === '');
+    $segment_order->delete_meta_data('b2bking_is_b2b_order');
+    $segment_order->save_meta_data();
+    if (function_exists('b2bking')) {
+      // The order customer, never the administrator/current user, determines the fallback.
+      update_user_meta($facr_user_id, 'b2bking_b2buser', 'yes');
+      wp_set_current_user($facr_user_id);
+      facr_it('guest order is B2C even with a B2B current user', \FACommissionRules\LineBuilder::customer_type('woo', $segment_order) === 'b2c');
+      $segment_order->delete_meta_data('_facr_customer_type');
+      $segment_order->set_customer_id($facr_user_id);
+      $segment_order->save();
+      wp_set_current_user(0);
+      facr_it('unmarked manual B2B order uses its own customer', \FACommissionRules\LineBuilder::customer_type('woo', $segment_order) === 'b2b');
+      update_user_meta($facr_user_id, 'b2bking_b2buser', 'no');
+      facr_it('fallback snapshot survives later customer reclassification', \FACommissionRules\LineBuilder::customer_type('woo', wc_get_order($segment_order->get_id())) === 'b2b');
+    } else {
+      facr_it('unmarked orders stay unknown without B2BKing', \FACommissionRules\LineBuilder::customer_type('woo', $segment_order) === '');
+    }
+    $segment_order->update_meta_data('b2bking_is_b2b_order', 'no');
+    $segment_order->update_meta_data('_facr_customer_type', 'b2b');
+    facr_it('explicit B2BKing marker takes priority over fallback snapshot', \FACommissionRules\LineBuilder::customer_type('woo', $segment_order) === 'b2c');
+    $segment_widgets = (new \FACommissionRules\Admin\Widgets())->affiliate_widget([], Fluent::affiliate($facr_aff_id));
+    facr_it('affiliate profile shows both labelled customer rates', strpos($segment_widgets[0]['content'], 'B2B') !== false && strpos($segment_widgets[0]['content'], 'B2C') !== false);
+  } finally {
+    wp_set_current_user($previous_user);
+    $segment_order->delete(true);
+  }
+
 } finally {
   Fluent::update_option( FACR_RULES_KEY, $facr_backup );
   Fluent::update_option( '_woo_connector_config', $facr_woo_backup );

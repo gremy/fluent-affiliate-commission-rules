@@ -382,6 +382,18 @@ try {
   facr_rest( 'scalar() passes a scalar through as a string', \FACommissionRules\Rest\Controller::scalar( 42 ) === '42' );
   facr_rest( 'a sanitiser survives an array-valued field', sanitize_key( \FACommissionRules\Rest\Controller::scalar( [ 'edit' ] ) ) === '' );
 
+  // The API must never turn a malformed segment into a broader Any rule.
+  foreach ( ['wholesale', '', null, ['b2b']] as $invalid_type ) {
+    $res = facr_rest_call( 'POST', '/rules', [ 'customer_type' => $invalid_type, 'rate' => 3 ] );
+    facr_rest( 'invalid customer type is rejected', $res->get_status() === 422 );
+  }
+  $res = facr_rest_call( 'POST', '/rules', [ 'customer_type' => 'b2b', 'rate' => 3 ] );
+  $saved = $res->get_data()['rule'];
+  facr_rest( 'customer type and label round-trip', $res->get_status() === 201 && $saved['customer_type'] === 'b2b' && strpos($saved['labels']['target'], 'B2B') !== false );
+  $res = facr_rest_call( 'POST', '/rules', [ 'id' => $saved['id'], 'rate' => 4 ] );
+  facr_rest( 'older clients cannot broaden an existing customer type by omission', $res->get_data()['rule']['customer_type'] === 'b2b' );
+  Store::delete($saved['id']);
+
 } finally {
   wp_set_current_user( $facr_r_prev );
   Fluent::update_option( FACR_RULES_KEY, $facr_r_backup );

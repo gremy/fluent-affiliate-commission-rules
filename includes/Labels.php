@@ -72,6 +72,23 @@ final class Labels {
 
   /** @param array<string,mixed> $rule */
   public static function target_label( array $rule ): string {
+    return self::qualify_target( self::base_target_label( $rule ), $rule );
+  }
+
+  public static function qualify_target( string $target, array $rule ): string {
+    $type = $rule['customer_type'] ?? 'all';
+    if ( ! in_array( $type, [ 'b2b', 'b2c' ], true ) ) {
+      return $target;
+    }
+    return sprintf(
+      /* translators: 1: products or commission basis, 2: B2B or B2C orders */
+      __( '%1$s · %2$s', 'fa-commission-rules' ),
+      $target,
+      $type === 'b2b' ? __( 'B2B orders', 'fa-commission-rules' ) : __( 'B2C orders', 'fa-commission-rules' )
+    );
+  }
+
+  private static function base_target_label( array $rule ): string {
     if ( $rule['target_type'] === 'all' ) {
       return __( 'All products', 'fa-commission-rules' );
     }

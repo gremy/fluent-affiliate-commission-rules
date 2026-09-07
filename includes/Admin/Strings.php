@@ -99,6 +99,15 @@ final class Strings {
       'friday'               => __( 'Friday', 'fa-commission-rules' ),
       'saturday'             => __( 'Saturday', 'fa-commission-rules' ),
 
+      'customer_type'       => __( 'Order customer type', 'fa-commission-rules' ),
+      'customer_all'        => __( 'Any', 'fa-commission-rules' ),
+      'customer_b2b'        => __( 'B2B orders', 'fa-commission-rules' ),
+      'customer_b2c'        => __( 'B2C orders', 'fa-commission-rules' ),
+      'filter_customer'     => __( 'All order types', 'fa-commission-rules' ),
+      'customer_help'       => __( 'B2B/B2C applies to WooCommerce orders classified by B2BKing. Within the same audience, these rules take priority over Any rules.', 'fa-commission-rules' ),
+      /* translators: 1: products or commission basis, 2: B2B or B2C orders */
+      'customer_target'     => __( '%1$s · %2$s', 'fa-commission-rules' ),
+
       // Editor drawer.
       'editor_add_title'     => __( 'Add commission rule', 'fa-commission-rules' ),
       'editor_edit_title'    => __( 'Edit commission rule', 'fa-commission-rules' ),

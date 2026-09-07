@@ -107,3 +107,14 @@ test('closing during product search does not carry loading state into a new edit
   assert.equal(h.app.editor.productLoading, false);
   assert.equal(h.app.editor.productOptions.length, 0);
 });
+
+test('customer type defaults to Any, survives editing and is sent on save', async () => {
+  const h = harness();
+  assert.equal(h.app.editor.form.customer_type, 'all');
+  h.app.openEditor({ id: 'b2b-rule', scope_type: 'all', target_type: 'all', customer_type: 'b2b', rate: 3, rate_type: 'percentage', status: 'active' });
+  assert.equal(h.app.editor.form.customer_type, 'b2b');
+  const saving = h.app.save();
+  assert.equal(JSON.parse(h.requests[0].options.body).customer_type, 'b2b');
+  h.reply(0, { rule: { id: 'b2b-rule' } });
+  await saving;
+});

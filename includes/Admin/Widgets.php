@@ -143,7 +143,7 @@ final class Widgets {
   /** Plain language, no admin vocabulary, and the end date always spelled out. */
   private static function plain_sentence( array $rule ): string {
     $scope = $rule['target_type'] === 'all'
-      ? __( 'on commissionable product-line totals', 'fa-commission-rules' )
+      ? Labels::qualify_target( __( 'on commissionable product-line totals', 'fa-commission-rules' ), $rule )
       : sprintf(
         /* translators: %s: the products or categories the rate covers */
         __( 'on %s', 'fa-commission-rules' ),

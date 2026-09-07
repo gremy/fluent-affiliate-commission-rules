@@ -15,6 +15,35 @@ defined( 'ABSPATH' ) || exit;
  * @package FACommissionRules
  */
 final class LineBuilder {
+  /** WooCommerce/B2BKing order classification; empty means unknown, never guessed B2C. */
+  public static function customer_type( $provider, $order ): string {
+    if ( (string) $provider !== 'woo' || ! function_exists( 'wc_get_order' ) ) {
+      return '';
+    }
+    $order = $order instanceof \WC_Order ? $order : wc_get_order( (int) $order );
+    if ( ! $order instanceof \WC_Order ) {
+      return '';
+    }
+    $native = $order->get_meta( 'b2bking_is_b2b_order', true );
+    if ( in_array( $native, [ 'yes', 'no' ], true ) ) {
+      return $native === 'yes' ? 'b2b' : 'b2c';
+    }
+    $saved = $order->get_meta( '_facr_customer_type', true );
+    if ( in_array( $saved, [ 'b2b', 'b2c' ], true ) ) {
+      return $saved;
+    }
+    if ( ! function_exists( 'b2bking' ) ) {
+      return '';
+    }
+    // Older/manual orders may lack B2BKing's marker. Snapshot their customer at
+    // first pricing, so later account changes do not silently reclassify them.
+    $user_id = (int) $order->get_customer_id();
+    $type = $user_id > 0 && b2bking()->is_b2b_user( $user_id ) ? 'b2b' : 'b2c';
+    $order->update_meta_data( '_facr_customer_type', $type );
+    $order->save_meta_data();
+    return $type;
+  }
+
   /** @var array<int,array{ids:int[],depths:array<int,int>}> */
   private static array $term_cache = [];
 

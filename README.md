@@ -23,13 +23,14 @@ This plugin adds that, without touching Fluent's compiled admin app and preservi
 Every rule answers four questions: **who** (everyone, a group, one affiliate),
 **what** (all products, a category, a product or variation), **how much**
 (a percentage of the line total, or a flat amount per line), and **when**
-(an optional start and end date).
+(an optional start and end date). Rules can also restrict the order customer type to **B2B** or **B2C**; existing rules default to **Any**.
 
 For each order line, **exactly one rule wins. Rules never stack.**
 
 ```
-score = scope × 10 + target
+score = scope × 100 + customer × 10 + target
   scope:  affiliate 3 > group 2 > everyone 1
+  customer: B2B/B2C 1 > Any 0
   target: product 3 > category 2 > everything 1
 ```
 
@@ -51,6 +52,39 @@ live and shown as read-only "Everyone" rows, so there is one list to read and no
 second source of truth — and only when Fluent's own gate is on and it has built
 a non-empty watched-product/category list from them, exactly as Fluent's own
 price path requires.
+
+## Different B2B and B2C rates
+
+In **Fluent Affiliate → Commission Rules → Add rule**, choose the affiliate audience,
+then **Order customer type → B2B orders** or **B2C orders**, products and rate. Save a
+second rule for the other customer type. For example, two Everyone / All products
+rules could pay 3% on B2B orders and 10% on B2C orders; these numbers are examples,
+not defaults. The editor preview, list, profile and portal identify the order type.
+The order-type filter selects rules with that setting, not all rules potentially
+eligible for an order of that type.
+
+Within the same affiliate audience, a B2B/B2C rule beats an Any rule, even if the Any
+rule names a product. Audience priority still comes first: an individual affiliate
+rule beats an Everyone rule. Use matching audiences when setting the two rates.
+Opposite customer types never conflict or override one another.
+
+Classification comes from WooCommerce's saved `b2bking_is_b2b_order` meta (`yes` / `no`),
+using WooCommerce's HPOS-compatible order API. For older or manually created orders
+without that marker, active B2BKing classifies the **order customer** at first pricing;
+the result is saved as `_facr_customer_type` so subsequent account changes do not
+reclassify that order. Guests are B2C in this fallback. An explicit B2BKing order
+marker takes priority over the fallback snapshot.
+
+If the order cannot be loaded, the provider is not WooCommerce, or an unmarked order
+has no B2BKing available, its type is unknown and only Any rules can apply. Existing
+B2BKing markers and fallback snapshots remain readable if B2BKing is deactivated.
+The referral audit stamp includes the resolved customer type (`b2b`, `b2c`, or empty
+for unknown). No existing referrals or saved rule rates are rewritten.
+
+These conditions apply to initial sales, lifetime repeat purchases and subscription
+renewals that Fluent already attributes. They do not enable lifetime or renewal
+attribution, change customer ownership, or introduce a per-customer commission term.
+Configure those native features in Fluent Affiliate separately.
 
 ## Where it appears
 

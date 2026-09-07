@@ -32,7 +32,7 @@
   }
 
   function specificity( rule ) {
-    return ( SCOPE_RANK[ rule.scope_type ] || 1 ) * 10 + ( TARGET_RANK[ rule.target_type ] || 1 );
+    return ( SCOPE_RANK[ rule.scope_type ] || 1 ) * 100 + ( rule.customer_type && rule.customer_type !== 'all' ? 10 : 0 ) + ( TARGET_RANK[ rule.target_type ] || 1 );
   }
 
   /** Most specific first, so the rules that actually fire are on top; newest breaks ties. */
@@ -59,6 +59,9 @@
         return false;
       }
       if ( filters.target && rule.target_type !== filters.target ) {
+        return false;
+      }
+      if ( filters.customer_type && ( rule.customer_type || 'all' ) !== filters.customer_type ) {
         return false;
       }
       if ( filters.status && rule.status !== filters.status ) {
@@ -131,6 +134,10 @@
       what = names.join( ', ' );
     } else {
       what = form.target_type === 'category' ? i18n.sentence_category : i18n.sentence_product;
+    }
+
+    if ( form.customer_type === 'b2b' || form.customer_type === 'b2c' ) {
+      what = sprintf( i18n.customer_target, what, i18n[ 'customer_' + form.customer_type ] );
     }
 
     var when = '';

@@ -44,9 +44,9 @@ test( 'sprintf handles %s, %d and positional arguments', () => {
 } );
 
 test( 'specificity ranks scope over target', () => {
-  assert.equal( H.specificity( rule() ), 11 );
-  assert.equal( H.specificity( rule( { scope_type: 'group', target_type: 'category' } ) ), 22 );
-  assert.equal( H.specificity( rule( { scope_type: 'affiliate', target_type: 'product' } ) ), 33 );
+  assert.equal( H.specificity( rule() ), 101 );
+  assert.equal( H.specificity( rule( { scope_type: 'group', target_type: 'category' } ) ), 202 );
+  assert.equal( H.specificity( rule( { scope_type: 'affiliate', target_type: 'product' } ) ), 303 );
   assert.ok( H.specificity( rule( { scope_type: 'group', target_type: 'product' } ) ) < H.specificity( rule( { scope_type: 'affiliate', target_type: 'all' } ) ) );
 } );
 
@@ -163,3 +163,13 @@ test( 'statusOf: an active rule within its window (or with no window) is effecti
   assert.equal( H.statusOf( rule(), '2026-09-05' ), 'effective' );
   assert.equal( H.statusOf( rule( { starts_at: '2026-01-01', ends_at: '2026-12-31' } ), '2026-09-05' ), 'effective' );
 } );
+
+test('customer segmentation sorts and filters without mixing B2B/B2C', () => {
+  const b2b = rule({ id: 'b', customer_type: 'b2b' });
+  const b2c = rule({ id: 'c', customer_type: 'b2c' });
+  const any = rule({ id: 'a', target_type: 'product' });
+  assert.ok(H.specificity(b2b) > H.specificity(any));
+  assert.match(H.sentence(b2b, ctx, { ...i18n, customer_target: '%1$s · %2$s', customer_b2b: 'B2B orders' }), /B2B orders/);
+  assert.deepEqual(H.filterRules([any, b2b, b2c], { customer_type: 'b2b' }), [b2b]);
+  assert.deepEqual(H.filterRules([any, b2b], { customer_type: 'all' }), [any]);
+});

@@ -19,6 +19,7 @@ final class Store {
   public const STAMP_VERSION = 2;
 
   public const SCOPES  = [ 'all', 'group', 'affiliate' ];
+  public const CUSTOMER_TYPES = [ 'all', 'b2b', 'b2c' ];
   public const TARGETS = [ 'all', 'category', 'product' ];
   public const STATUSES = [ 'active', 'inactive' ];
   public const RATE_TYPES = [ 'percentage', 'flat' ];
@@ -176,6 +177,11 @@ final class Store {
    */
   public static function validate( array $input ): array {
     $errors = [];
+    $customer_type = array_key_exists( 'customer_type', $input ) ? $input['customer_type'] : 'all';
+    if ( ! is_string( $customer_type ) || ! in_array( $customer_type, self::CUSTOMER_TYPES, true ) ) {
+      $errors['customer_type'] = __( 'Choose Any, B2B or B2C.', 'fa-commission-rules' );
+      $customer_type = 'all';
+    }
 
     $scope_type = in_array( (string) ( $input['scope_type'] ?? '' ), self::SCOPES, true ) ? (string) $input['scope_type'] : 'all';
     $scope_id   = $scope_type === 'all' ? 0 : (int) ( $input['scope_id'] ?? 0 );
@@ -254,6 +260,7 @@ final class Store {
       [
         'id'          => (string) ( $input['id'] ?? '' ) !== '' ? (string) $input['id'] : wp_generate_uuid4(),
         'status'      => in_array( (string) ( $input['status'] ?? '' ), self::STATUSES, true ) ? (string) $input['status'] : 'active',
+        'customer_type' => $customer_type,
         'scope_type'  => $scope_type,
         'scope_id'    => $scope_id,
         'target_type' => $target_type,
@@ -426,6 +433,7 @@ final class Store {
       'scope_type'  => in_array( (string) ( $rule['scope_type'] ?? '' ), self::SCOPES, true ) ? (string) $rule['scope_type'] : 'all',
       'scope_id'    => (int) ( $rule['scope_id'] ?? 0 ),
       'target_type' => in_array( (string) ( $rule['target_type'] ?? '' ), self::TARGETS, true ) ? (string) $rule['target_type'] : 'all',
+      'customer_type' => (string) ( $rule['customer_type'] ?? 'all' ),
       'target_ids'  => array_values( array_map( 'intval', (array) ( $rule['target_ids'] ?? [] ) ) ),
       'rate'        => (float) ( $rule['rate'] ?? 0 ),
       'rate_type'   => ( $rule['rate_type'] ?? 'percentage' ) === 'flat' ? 'flat' : 'percentage',

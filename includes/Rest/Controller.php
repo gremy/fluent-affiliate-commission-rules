@@ -231,6 +231,7 @@ final class Controller {
       'status'      => sanitize_key( self::scalar( $body['status'] ?? 'active' ) ),
       'scope_type'  => sanitize_key( self::scalar( $body['scope_type'] ?? 'all' ) ),
       'scope_id'    => (int) self::scalar( $body['scope_id'] ?? 0 ),
+      'customer_type' => self::scalar( $body['customer_type'] ?? $existing['customer_type'] ?? 'all' ),
       'target_type' => sanitize_key( self::scalar( $body['target_type'] ?? 'all' ) ),
       'target_ids'  => $target_ids,
       'rate'        => sanitize_text_field( self::scalar( $body['rate'] ?? '' ) ),
@@ -274,6 +275,7 @@ final class Controller {
    */
   private static function invalid_fields( array $body ): array {
     $enums = [
+      'customer_type' => Store::CUSTOMER_TYPES,
       'scope_type'  => Store::SCOPES,
       'target_type' => Store::TARGETS,
       'rate_type'   => Store::RATE_TYPES,
@@ -283,7 +285,7 @@ final class Controller {
     $message = __( 'Invalid value.', 'fa-commission-rules' );
     $errors  = [];
 
-    foreach ( [ 'scope_type', 'target_type', 'rate_type', 'status', 'starts_at', 'ends_at', 'rate', 'scope_id', 'note' ] as $field ) {
+    foreach ( [ 'customer_type', 'scope_type', 'target_type', 'rate_type', 'status', 'starts_at', 'ends_at', 'rate', 'scope_id', 'note' ] as $field ) {
       if ( ! array_key_exists( $field, $body ) ) {
         continue;
       }

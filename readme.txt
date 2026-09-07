@@ -4,7 +4,7 @@ Tags: affiliate, commission, fluent affiliate, woocommerce, referrals
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,11 @@ One detail worth knowing when reading old audit stamps: the synthetic `fluent:<n
 No. Pro is needed for affiliate groups, lifetime commissions and the WooCommerce integration. Without Pro, the group scope is hidden and everything else works.
 
 == Changelog ==
+
+= 1.3.0 =
+* Add Any, B2B and B2C order customer types to commission rules.
+* Use B2BKing order classification for sales, lifetime purchases and subscription renewals.
+* Show customer types in rule summaries, filters and affiliate cards, with English and Romanian translations.
 
 = 1.2.0 =
 * Preserve native global rate order and matching on untouched lines; exclude sale tables from lifetime referrals.

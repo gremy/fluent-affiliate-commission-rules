@@ -66,7 +66,8 @@ final class ReferralHooks {
     );
 
     $result = Resolver::resolve(
-      [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => (int) $affiliate->group_id ],
+      [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => (int) $affiliate->group_id,
+        'customer_type' => LineBuilder::customer_type( $provider, $data['provider_id'] ?? 0 ) ],
       $order_total,
       $lines,
       $this->rules_for_provider( $provider, $type === 'lifetime_sale' ? 'lifetime' : 'sale' ),
@@ -208,7 +209,8 @@ final class ReferralHooks {
     };
 
     $result = Resolver::resolve(
-      [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => (int) ( $affiliate->group_id ?? 0 ) ],
+      [ 'affiliate_id' => (int) $affiliate->id, 'group_id' => (int) ( $affiliate->group_id ?? 0 ),
+        'customer_type' => LineBuilder::customer_type( $provider, $order instanceof \WC_Order ? $order : $this->renewal_order_id( $context ) ) ],
       $order_total,
       $lines,
       // Fluent keeps a separate global rate table for renewals; reading the sale
@@ -321,6 +323,7 @@ final class ReferralHooks {
     $raw = array_sum( array_column( $result['lines'], 'commission' ) ) + $result['remainder_commission'];
     $settings['fa_commission_rules'] = [
       'version'   => Store::STAMP_VERSION,
+      'customer_type' => $result['customer_type'] ?? '',
       'amount'    => $result['amount'],
       'rounding_adjustment' => $result['amount'] - $raw,
       'lines'     => $result['lines'],

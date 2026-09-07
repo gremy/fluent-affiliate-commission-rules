@@ -10,7 +10,8 @@ defined( 'ABSPATH' ) || exit;
  * line; rules never stack. Pure PHP on purpose: no WordPress calls, so it runs
  * under bare `php` in tests and can be reasoned about in isolation.
  *
- * score = scope * 10 + target
+ * score = scope * 100 + customer * 10 + target
+ *   customer: B2B/B2C 1 > any 0
  *   scope:  affiliate 3 > group 2 > everyone 1
  *   target: product 3 > category 2 > all 1
  * Tied category rules: the closest matched term wins (0 = directly assigned).
@@ -23,7 +24,7 @@ final class Resolver {
    * Rules that are active, inside their window at $now, and in scope for this affiliate.
    *
    * @param array<int,array<string,mixed>> $rules
-   * @param array{affiliate_id:int,group_id:int} $context
+   * @param array{affiliate_id:int,group_id:int,customer_type?:string} $context
    * @param string $now Y-m-d
    * @return array<int,array<string,mixed>>
    */
@@ -34,8 +35,12 @@ final class Resolver {
     return array_values(
       array_filter(
         $rules,
-        static function ( array $rule ) use ( $affiliate_id, $group_id, $now ): bool {
+        static function ( array $rule ) use ( $affiliate_id, $group_id, $now, $context ): bool {
           if ( ( $rule['status'] ?? 'active' ) !== 'active' ) {
+            return false;
+          }
+          $customer_type = (string) ( $rule['customer_type'] ?? 'all' );
+          if ( $customer_type !== 'all' && $customer_type !== ( $context['customer_type'] ?? '' ) ) {
             return false;
           }
           $starts = (string) ( $rule['starts_at'] ?? '' );
@@ -60,7 +65,7 @@ final class Resolver {
   }
 
   /**
-   * @param array{affiliate_id:int,group_id:int} $context
+   * @param array{affiliate_id:int,group_id:int,customer_type?:string} $context
    * @param float $order_total Fluent's commissionable order total.
    * @param array<int,array<string,mixed>> $lines
    * @param array<int,array<string,mixed>> $rules
@@ -131,6 +136,7 @@ final class Resolver {
     // to Fluent. Every intermediate stays full precision so a long order does not
     // accumulate rounding error line by line.
     return [
+      'customer_type'        => (string) ( $context['customer_type'] ?? '' ),
       'amount'               => round( $commission + $remainder_commission, 2 ),
       'lines'                => $out_lines,
       'remainder_total'      => $remainder_total,
@@ -145,6 +151,18 @@ final class Resolver {
    * Cards qualify remaining coverage because other targets can still overlap.
    */
   public static function effective( array $rules, array $context, string $now, ?callable $target_line = null ): array {
+    if ( ! array_key_exists( 'customer_type', $context ) ) {
+      // A rate card has no order: keep coverage that can win in any customer segment.
+      $out = [];
+      foreach ( [ 'b2b', 'b2c', '' ] as $customer_type ) {
+        foreach ( self::effective( $rules, array_merge( $context, [ 'customer_type' => $customer_type ] ), $now, $target_line ) as $rule ) {
+          $id = $rule['id'];
+          $rule['target_ids'] = array_values( array_unique( array_merge( $out[ $id ]['target_ids'] ?? [], $rule['target_ids'] ) ) );
+          $out[ $id ] = $rule;
+        }
+      }
+      return array_values( $out );
+    }
     $candidates = self::applicable( $rules, $context, $now );
     $out = [];
     foreach ( $candidates as $rule ) {
@@ -211,7 +229,7 @@ final class Resolver {
         if ( ! self::scope_overlaps( $rule, $other ) || ! self::target_overlaps( $rule, $other ) ) {
           continue;
         }
-        if ( ! self::windows_overlap( $rule, $other ) ) {
+        if ( ! self::customer_types_overlap( $rule, $other ) || ! self::windows_overlap( $rule, $other ) ) {
           continue;
         }
         if ( self::score( $other ) > $best_score ) {
@@ -259,13 +277,19 @@ final class Resolver {
           ) ) {
           continue;
         }
-        if ( ! self::windows_overlap( $rule, $other ) ) {
+        if ( ! self::customer_types_overlap( $rule, $other ) || ! self::windows_overlap( $rule, $other ) ) {
           continue;
         }
         $map[ $id ][] = (string) $other['id'];
       }
     }
     return $map;
+  }
+
+  private static function customer_types_overlap( array $a, array $b ): bool {
+    $a_type = $a['customer_type'] ?? 'all';
+    $b_type = $b['customer_type'] ?? 'all';
+    return $a_type === 'all' || $b_type === 'all' || $a_type === $b_type;
   }
 
   /**
@@ -370,7 +394,8 @@ final class Resolver {
   private static function score( array $rule ): int {
     $scope = [ 'affiliate' => 3, 'group' => 2, 'all' => 1 ][ (string) ( $rule['scope_type'] ?? 'all' ) ] ?? 1;
     $target = [ 'product' => 3, 'category' => 2, 'all' => 1 ][ (string) ( $rule['target_type'] ?? 'all' ) ] ?? 1;
-    return $scope * 10 + $target;
+    $customer = ( $rule['customer_type'] ?? 'all' ) === 'all' ? 0 : 1;
+    return $scope * 100 + $customer * 10 + $target;
   }
 
   /**
@@ -397,10 +422,10 @@ final class Resolver {
    * @param array<string,mixed> $other
    */
   private static function target_overlaps( array $rule, array $other ): bool {
-    if ( (string) $rule['target_type'] === 'all' ) {
+    if ( (string) $rule['target_type'] === 'all' || (string) $other['target_type'] === 'all' ) {
       return true;
     }
-    if ( (string) $rule['target_type'] === 'category' && (string) $other['target_type'] === 'product' ) {
+    if ( in_array( 'category', [ $rule['target_type'], $other['target_type'] ], true ) && in_array( 'product', [ $rule['target_type'], $other['target_type'] ], true ) ) {
       return true; // which products carry the term is unknown here.
     }
     if ( (string) $rule['target_type'] !== (string) $other['target_type'] ) {

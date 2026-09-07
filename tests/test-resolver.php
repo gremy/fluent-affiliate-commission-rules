@@ -319,6 +319,32 @@ facr_rt( 'a zero-total flat line does not inflate the order commission', abs( $o
 facr_rt( 'a flat rate still pays in full on a line that sold something', abs( Resolver::line_commission( 100.0, 50.0, 'flat' ) - 50.0 ) < 0.001 );
 facr_rt( 'a percentage on a zero-total line is still zero', abs( Resolver::line_commission( 0.0, 10.0, 'percentage' ) ) < 0.001 );
 
+// Customer segments filter eligibility before scope/target precedence.
+$segments = [
+  facr_rule( [ 'id' => 'retail', 'customer_type' => 'b2c', 'rate' => 10.0 ] ),
+  facr_rule( [ 'id' => 'wholesale', 'customer_type' => 'b2b', 'rate' => 3.0 ] ),
+];
+foreach ( [ 'b2b' => 3.0, 'b2c' => 10.0 ] as $segment => $amount ) {
+  $out = Resolver::resolve( array_merge( $ctx, [ 'customer_type' => $segment ] ), 100, [ facr_line( 101, 100 ) ], $segments, $now, $base10 );
+  facr_rt( "$segment gets only its own commission", $out['amount'] === $amount && $out['customer_type'] === $segment );
+}
+facr_rt( 'unknown customer type does not match B2B/B2C', Resolver::resolve( $ctx, 100, [ facr_line( 101, 100 ) ], $segments, $now, $base10 ) === null );
+$general = facr_rule( [ 'id' => 'general', 'target_type' => 'product', 'target_ids' => [101], 'rate' => 15.0 ] );
+$out = Resolver::resolve( array_merge( $ctx, [ 'customer_type' => 'b2b' ] ), 100, [ facr_line( 101, 100 ) ], array_merge( $segments, [$general] ), $now, $base10 );
+facr_rt( 'customer-specific rate beats an Any product rule in the same audience', $out['amount'] === 3.0 );
+facr_rt( 'Any product rule warns about a broader B2B target taking priority', Resolver::shadow_map([$general, $segments[1]])['general'] === 'wholesale' );
+$personal = facr_rule( [ 'id' => 'personal', 'scope_type' => 'affiliate', 'scope_id' => 7, 'rate' => 7.0 ] );
+$out = Resolver::resolve( array_merge( $ctx, [ 'customer_type' => 'b2b' ] ), 100, [ facr_line( 101, 100 ) ], array_merge( $segments, [$personal] ), $now, $base10 );
+facr_rt( 'individual audience still takes priority over everyone B2B', $out['amount'] === 7.0 );
+facr_rt( 'opposite segments never conflict or shadow each other', Resolver::tie_map($segments) === ['retail'=>[], 'wholesale'=>[]] && Resolver::shadow_map($segments) === ['retail'=>null, 'wholesale'=>null] );
+$cards = Resolver::effective( $segments, $ctx, $now );
+$ids = array_column($cards, 'id'); sort($ids);
+facr_rt( 'rate card keeps both customer segments', $ids === ['retail','wholesale'] );
+$cards = Resolver::effective( array_merge( $segments, [$personal] ), $ctx, $now );
+facr_rt( 'rate card suppresses segment rates covered by personal Any rule', array_column($cards,'id') === ['personal'] );
+$cards = Resolver::effective( [$segments[1], $general], $ctx, $now );
+facr_rt( 'rate card retains Any coverage outside B2B', count($cards) === 2 );
+
 echo $GLOBALS['facr_res_fail'] ? "\n{$GLOBALS['facr_res_fail']} FAILURES\n" : "\nAll resolver checks passed\n";
 if ( PHP_SAPI === 'cli' && ! defined( 'WP_CLI' ) ) {
   exit( $GLOBALS['facr_res_fail'] ? 1 : 0 );
