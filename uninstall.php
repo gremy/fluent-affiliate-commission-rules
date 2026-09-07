@@ -12,6 +12,10 @@ declare(strict_types=1);
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
+if ( function_exists( 'as_unschedule_all_actions' ) ) {
+  as_unschedule_all_actions( 'facr_retry_woo_renewal', [], 'fa-commission-rules' );
+}
+
 if ( class_exists( '\FluentAffiliate\App\Helper\Utility' ) && method_exists( '\FluentAffiliate\App\Helper\Utility', 'deleteOption' ) ) {
   \FluentAffiliate\App\Helper\Utility::deleteOption( '_fa_commission_rules' );
   return;

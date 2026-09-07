@@ -111,6 +111,13 @@ pricing and referral persistence. This compatibility adapter is restricted to
 1.6.5; rerun the native attribution tests before upgrading Fluent. Other versions
 use their own connector callbacks.
 
+Renewal orders passing through classic or Blocks checkout are left to the renewal
+payment handler. Renewal processing uses a database lock per parent order so
+concurrent callbacks cannot duplicate a renewal or exceed its shared payment limit.
+A busy lock schedules another attempt through WooCommerce Action Scheduler after
+30 seconds. Retries require a paid order and enabled renewal settings. Pending
+retry actions are cancelled on uninstall.
+
 After a save conflict, **Review latest saved rule** shows the current values and
 keeps your draft. **Restore my draft** restores your edits for review and saving.
 If the rule was deleted, you can explicitly recreate the draft as a new rule.

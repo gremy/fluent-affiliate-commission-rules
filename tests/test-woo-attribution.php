@@ -122,6 +122,99 @@ if ( ! defined( 'DB_NAME' ) || ! str_starts_with( DB_NAME, 'facr_tests_' )
     $check( 'ordinary sale-parent renewals still use the native handler', (bool) Referral::where( 'provider', 'woo' )->where( 'provider_id', $limited->get_id() )->first() );
     $referral->type = 'lifetime_sale'; $referral->save();
 
+    // A renewal paid through checkout must still use renewal eligibility and pricing.
+    $subscription->set_billing_email( $email );
+    $subscription->add_product( $product, 1, [ 'subtotal' => 100, 'total' => 100 ] );
+    $subscription->set_total( 100 ); $subscription->save();
+    $segmentRules = Store::all(); Fluent::update_option( FACR_RULES_KEY, [] );
+    foreach ( [ 'woocommerce_checkout_order_processed', 'woocommerce_store_api_checkout_order_processed' ] as $checkoutHook ) {
+      $checkoutRenewal = wcs_create_renewal_order( $subscription );
+      if ( is_wp_error( $checkoutRenewal ) ) { throw new RuntimeException( $checkoutRenewal->get_error_message() ); }
+      $orders[] = $checkoutRenewal;
+      Utility::updateReferralSettings( [ 'max_renewal_count' => 1 ] );
+      $_COOKIE['f_aff'] = $affiliate->id . '|0';
+      do_action( $checkoutHook, $checkoutHook === 'woocommerce_checkout_order_processed' ? $checkoutRenewal->get_id() : $checkoutRenewal, [], $checkoutRenewal );
+      unset( $_COOKIE['f_aff'] );
+      do_action( $checkoutHook, $checkoutHook === 'woocommerce_checkout_order_processed' ? $checkoutRenewal->get_id() : $checkoutRenewal, [], $checkoutRenewal );
+      do_action( 'woocommerce_subscription_renewal_payment_complete', $subscription, $checkoutRenewal );
+      $check( $checkoutHook . ' cannot bypass renewal limits with or without a cookie', ! Referral::where( 'provider', 'woo' )->where( 'provider_id', $checkoutRenewal->get_id() )->exists() );
+      Utility::updateReferralSettings( [ 'max_renewal_count' => 0 ] );
+      do_action( 'woocommerce_subscription_renewal_payment_complete', $subscription, $checkoutRenewal );
+      $checkoutReferral = Referral::where( 'provider', 'woo' )->where( 'provider_id', $checkoutRenewal->get_id() )->first();
+      $check( $checkoutHook . ' uses the renewal rate and parent after payment', $checkoutReferral && $checkoutReferral->type === 'recurring_sale' && (float) $checkoutReferral->amount === 5.0 && (int) $checkoutReferral->parent_id === (int) $referral->id );
+    }
+    Fluent::update_option( FACR_RULES_KEY, $segmentRules );
+
+    // Force overlap at the SQL lock attempt; workers boot the real enabled integration.
+    $runWorkers = static function ( array $orderIds, bool $holdLock = false ) use ( $subscription, $parent ) {
+      global $wpdb;
+      $lock = 'facr:' . hash( 'sha224', DB_NAME . ':' . $wpdb->prefix . ':renewal:' . $parent->get_id() );
+      $dir = sys_get_temp_dir() . '/facr-renewals-' . bin2hex( random_bytes( 6 ) ); mkdir( $dir, 0700 );
+      $processes = [];
+      try {
+        if ( $holdLock && (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 1)', $lock ) ) !== '1' ) { throw new RuntimeException( 'Could not hold test lock' ); }
+        foreach ( $orderIds as $worker => $orderId ) {
+          $code = 'require ' . var_export( ABSPATH . 'wp-load.php', true ) . ';'
+            . 'add_filter("pre_wp_mail","__return_false");'
+            . 'add_filter("query",function($sql){if(str_contains($sql,"GET_LOCK")){touch(' . var_export( $dir . '/attempt' . $worker, true ) . ');}return $sql;});'
+            . 'add_filter("fluent_affiliate/recurring_commission",function($amount){touch(' . var_export( $dir . '/inside', true ) . ');'
+            . '$deadline=microtime(true)+15;while(!file_exists(' . var_export( $dir . '/go', true ) . ')){if(microtime(true)>$deadline){exit(2);}usleep(10000);}return $amount;},99);'
+            . 'do_action("woocommerce_subscription_renewal_payment_complete",wcs_get_subscription(' . $subscription->get_id() . '),wc_get_order(' . $orderId . '));';
+          $processes[] = proc_open( [ PHP_BINARY, '-r', $code ], [ 0 => [ 'file', '/dev/null', 'r' ], 1 => [ 'file', $dir . '/out' . $worker, 'w' ], 2 => [ 'file', $dir . '/err' . $worker, 'w' ] ], $pipes );
+        }
+        $deadline = microtime( true ) + 15;
+        while ( count( glob( $dir . '/attempt*' ) ) < count( $orderIds ) || ( ! $holdLock && ! file_exists( $dir . '/inside' ) ) ) {
+          if ( microtime( true ) > $deadline ) { throw new RuntimeException( 'Workers did not reach the renewal lock' ); }
+          usleep( 10000 );
+        }
+        touch( $dir . '/go' );
+        foreach ( $processes as $worker => $process ) {
+          if ( proc_close( $process ) !== 0 ) { throw new RuntimeException( file_get_contents( $dir . '/err' . $worker ) ); }
+        }
+        $processes = [];
+      } finally {
+        foreach ( $processes as $process ) { if ( is_resource( $process ) ) { proc_terminate( $process ); proc_close( $process ); } }
+        if ( $holdLock ) { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) ); }
+        foreach ( glob( $dir . '/*' ) as $file ) { unlink( $file ); } rmdir( $dir );
+      }
+    };
+    foreach ( [ 'sale', 'lifetime_sale' ] as $parentType ) {
+      $referral->type = $parentType; $referral->save();
+      $concurrent = $makeOrder();
+      $runWorkers( [ $concurrent->get_id(), $concurrent->get_id() ] );
+      $check( $parentType . ': concurrent duplicate events create one commission', Referral::where( 'provider', 'woo' )->where( 'provider_id', $concurrent->get_id() )->count() === 1 && (float) Referral::where( 'provider', 'woo' )->where( 'provider_id', $concurrent->get_id() )->sum( 'amount' ) === 3.0 );
+      $used = Referral::where( 'parent_id', $referral->id )->where( 'type', 'recurring_sale' )->count();
+      Utility::updateReferralSettings( [ 'max_renewal_count' => $used + 2 ] );
+      $first = $makeOrder(); $second = $makeOrder();
+      $runWorkers( [ $first->get_id(), $second->get_id() ] );
+      $check( $parentType . ': concurrent different renewals cannot exceed the shared limit', Referral::where( 'provider', 'woo' )->whereIn( 'provider_id', [ $first->get_id(), $second->get_id() ] )->count() === 1 );
+      Utility::updateReferralSettings( [ 'max_renewal_count' => 0 ] );
+    }
+    $busy = $makeOrder(); $busy->set_status( 'processing' ); $busy->save();
+    $runWorkers( [ $busy->get_id() ], true );
+    $retryArgs = [ $subscription->get_id(), $busy->get_id() ];
+    $check( 'lock timeout queues a retry without recording an unlocked commission', as_has_scheduled_action( 'facr_retry_woo_renewal', $retryArgs, 'fa-commission-rules' ) && ! Referral::where( 'provider', 'woo' )->where( 'provider_id', $busy->get_id() )->exists() );
+    Utility::updateReferralSettings( [ 'enable_subscription_renewal' => 'no' ] );
+    do_action( 'facr_retry_woo_renewal', ...$retryArgs );
+    $check( 'retry respects renewal settings changed since the original event', ! Referral::where( 'provider', 'woo' )->where( 'provider_id', $busy->get_id() )->exists() );
+    Utility::updateReferralSettings( [ 'enable_subscription_renewal' => 'yes' ] );
+    $busy->set_status( 'refunded' ); $busy->save();
+    do_action( 'facr_retry_woo_renewal', ...$retryArgs );
+    $check( 'retry does not commission a refunded order', ! Referral::where( 'provider', 'woo' )->where( 'provider_id', $busy->get_id() )->exists() );
+    $busy->set_status( 'processing' ); $busy->save();
+    do_action( 'facr_retry_woo_renewal', ...$retryArgs );
+    do_action( 'facr_retry_woo_renewal', ...$retryArgs );
+    $check( 'deferred retries record the paid renewal only once', Referral::where( 'provider', 'woo' )->where( 'provider_id', $busy->get_id() )->count() === 1 );
+    $throw = static function () { throw new RuntimeException( 'Test pricing failure' ); };
+    $failed = $makeOrder();
+    add_filter( 'fluent_affiliate/recurring_commission', $throw, 99 );
+    try { ( new WooCompatibility() )->handleSubscriptionRenewal( $subscription, $failed ); } catch ( RuntimeException $error ) {
+      if ( $error->getMessage() !== 'Test pricing failure' ) { throw $error; }
+    } finally { remove_filter( 'fluent_affiliate/recurring_commission', $throw, 99 ); }
+    $runWorkers( [ $failed->get_id() ] );
+    $check( 'an exception releases the lock for another worker', Referral::where( 'provider', 'woo' )->where( 'provider_id', $failed->get_id() )->count() === 1 );
+
+
     $customer->created_at = gmdate( 'Y-m-d H:i:s', time() - 3 * DAY_IN_SECONDS ); $customer->save();
     Utility::updateReferralSettings( [ 'lifetime_expiry_days' => 1 ] );
     $expired = $makeOrder();
@@ -163,6 +256,11 @@ if ( ! defined( 'DB_NAME' ) || ! str_starts_with( DB_NAME, 'facr_tests_' )
 
   } finally {
     foreach ( array_reverse( $orders ) as $order ) {
+      if ( isset( $subscription ) && $subscription instanceof WC_Subscription ) {
+        foreach ( as_get_scheduled_actions( [ 'hook' => 'facr_retry_woo_renewal', 'args' => [ $subscription->get_id(), $order->get_id() ], 'group' => 'fa-commission-rules', 'per_page' => -1 ], 'ids' ) as $actionId ) {
+          ActionScheduler::store()->delete_action( $actionId );
+        }
+      }
       Referral::where( 'provider', 'woo' )->where( 'provider_id', $order->get_id() )->delete(); $order->delete( true );
     }
     if ( $product ) { $product->delete( true ); }

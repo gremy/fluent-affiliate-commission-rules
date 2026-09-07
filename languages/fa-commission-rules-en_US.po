@@ -1,7 +1,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Commission Rules for Fluent Affiliate 1.3.1\n"
+"Project-Id-Version: Commission Rules for Fluent Affiliate 1.3.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/fluent-affiliate-commission-rules\n"
 "POT-Creation-Date: 2026-09-07T14:44:27+00:00\n"
 "PO-Revision-Date: 2026-09-07 12:00+0300\n"
@@ -179,12 +179,14 @@ msgstr "Expired"
 
 #. translators: %s: the narrower rule that takes precedence for some products
 #: includes/Admin/Strings.php:50
+#, php-format
 msgid "May be overridden for some products by: %s"
 msgstr "May be overridden for some products by: %s"
 
 #. translators: 1: who the narrower rule applies to, 2: the products it
 #. targets
 #: includes/Admin/Strings.php:52
+#, php-format
 msgid "%1$s → %2$s"
 msgstr "%1$s → %2$s"
 
@@ -223,6 +225,7 @@ msgstr "Deactivate"
 
 #. translators: %d: number of selected rules
 #: includes/Admin/Strings.php:61
+#, php-format
 msgid "%d selected"
 msgstr "%d selected"
 
@@ -272,6 +275,7 @@ msgstr "Rules updated."
 
 #. translators: %s: what the saved rule does, in plain words
 #: includes/Admin/Strings.php:71
+#, php-format
 msgid "Rule saved: %s"
 msgstr "Rule saved: %s"
 
@@ -413,6 +417,7 @@ msgstr ""
 
 #. translators: 1: products or commission basis, 2: B2B or B2C orders
 #: includes/Admin/Strings.php:114 includes/Labels.php:85
+#, php-format
 msgid "%1$s · %2$s"
 msgstr "%1$s · %2$s"
 
@@ -523,21 +528,25 @@ msgstr "Save rule"
 #. translators: %1$s: who the rule applies to (e.g. "This affiliate"), %2$s:
 #. the rate (e.g. "10%"), %3$s: what it covers (e.g. "Headphones")
 #: includes/Admin/Strings.php:153
+#, php-format
 msgid "%1$s earns %2$s on %3$s."
 msgstr "%1$s earns %2$s on %3$s."
 
 #. translators: %s: the start date the rule takes effect
 #: includes/Admin/Strings.php:155
+#, php-format
 msgid " From %s."
 msgstr " From %s."
 
 #. translators: %s: the date the rule stops applying
 #: includes/Admin/Strings.php:157
+#, php-format
 msgid " Until %s."
 msgstr " Until %s."
 
 #. translators: %1$s: start date, %2$s: end date
 #: includes/Admin/Strings.php:159
+#, php-format
 msgid " From %1$s to %2$s."
 msgstr " From %1$s to %2$s."
 
@@ -564,6 +573,7 @@ msgstr "the chosen products"
 #. translators: %s: a flat commission amount, per order line, already in store
 #. currency
 #: includes/Admin/Strings.php:167 includes/Labels.php:121
+#, php-format
 msgid "%s per order line"
 msgstr "%s per order line"
 
@@ -609,47 +619,56 @@ msgstr "on commissionable product-line totals"
 
 #. translators: %s: the products or categories the rate covers
 #: includes/Admin/Widgets.php:149
+#, php-format
 msgid "on %s"
 msgstr "on %s"
 
 #. translators: 1: commission rate, 2: what it applies to, 3: the last day it
 #. applies
 #: includes/Admin/Widgets.php:156
+#, php-format
 msgid "When this rule takes precedence: %1$s %2$s, until %3$s."
 msgstr "When this rule takes precedence: %1$s %2$s, until %3$s."
 
 #. translators: 1: commission rate, 2: what it applies to
 #: includes/Admin/Widgets.php:165
+#, php-format
 msgid "When this rule takes precedence: %1$s %2$s."
 msgstr "When this rule takes precedence: %1$s %2$s."
 
 #. translators: %d: affiliate group id
 #: includes/Fluent.php:108
+#, php-format
 msgid "Group #%d"
 msgstr "Group #%d"
 
 #. translators: %d: affiliate id
 #: includes/Fluent.php:132
+#, php-format
 msgid "Affiliate #%d"
 msgstr "Affiliate #%d"
 
 #. translators: %s: affiliate name and id
 #: includes/Labels.php:38
+#, php-format
 msgid "Affiliate: %s"
 msgstr "Affiliate: %s"
 
 #. translators: %s: affiliate group name
 #: includes/Labels.php:44
+#, php-format
 msgid "Group: %s"
 msgstr "Group: %s"
 
 #. translators: %s: comma-separated product category names
 #: includes/Labels.php:104
+#, php-format
 msgid "Category: %s"
 msgstr "Category: %s"
 
 #. translators: %s: comma-separated product or variation names
 #: includes/Labels.php:109
+#, php-format
 msgid "Product: %s"
 msgstr "Product: %s"
 
@@ -659,26 +678,31 @@ msgstr "Always"
 
 #. translators: 1: start date, 2: end date
 #: includes/Labels.php:142
+#, php-format
 msgid "%1$s to %2$s"
 msgstr "%1$s to %2$s"
 
 #. translators: %s: start date
 #: includes/Labels.php:150
+#, php-format
 msgid "From %s"
 msgstr "From %s"
 
 #. translators: %s: end date
 #: includes/Labels.php:155
+#, php-format
 msgid "Until %s"
 msgstr "Until %s"
 
 #. translators: 1: rate, 2: what the rate applies to, 3: the date window
 #: includes/Labels.php:164
+#, php-format
 msgid "%1$s on %2$s (%3$s)"
 msgstr "%1$s on %2$s (%3$s)"
 
 #. translators: %s: minimum Fluent Affiliate version
 #: includes/Plugin.php:62
+#, php-format
 msgid ""
 "Commission Rules for Fluent Affiliate needs Fluent Affiliate %s or newer to "
 "be installed and active."
@@ -710,6 +734,7 @@ msgstr "Unknown bulk action."
 
 #. translators: %d: number of rules changed by a bulk action.
 #: includes/Rest/Controller.php:370
+#, php-format
 msgid "%d rule updated."
 msgid_plural "%d rules updated."
 msgstr[0] "%d rule updated."
@@ -759,6 +784,7 @@ msgstr "Choose at least one product or variation."
 
 #. translators: %s: comma-separated list of ids that could not be found
 #: includes/Store.php:221
+#, php-format
 msgid "This no longer exists: %s."
 msgid_plural "These no longer exist: %s."
 msgstr[0] "This no longer exists: %s."
@@ -826,26 +852,33 @@ msgstr ""
 " date. For a period starting when each customer is referred, use Fluent "
 "Affiliate’s lifetime commission expiry setting."
 
-#: includes/WooCompatibility.php:92
+#: includes/WooCompatibility.php:147
 msgid "Renewal order"
 msgstr "Renewal order"
 
 #. translators: %d: number of additional order lines
-#: includes/WooCompatibility.php:95
+#: includes/WooCompatibility.php:150
+#, php-format
 msgid " and %d more item"
 msgid_plural " and %d more items"
 msgstr[0] " and %d more item"
 msgstr[1] " and %d more items"
 
 #. translators: %s: order item description
-#: includes/WooCompatibility.php:103
+#: includes/WooCompatibility.php:158
+#, php-format
 msgid "%s (Renewal)"
 msgstr "%s (Renewal)"
 
 #. translators: %d: Fluent Affiliate referral ID
-#: includes/WooCompatibility.php:117
+#: includes/WooCompatibility.php:172
+#, php-format
 msgid "Recurring affiliate referral #%d created."
 msgstr "Recurring affiliate referral #%d created."
+
+#: includes/WooCompatibility.php:80
+msgid "Could not schedule the affiliate renewal commission retry."
+msgstr "Could not schedule the affiliate renewal commission retry."
 
 #~ msgid "First 12 months"
 #~ msgstr "First 12 months"

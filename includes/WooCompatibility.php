@@ -12,10 +12,12 @@ use FluentAffiliatePro\App\Services\Integrations\WooCommerce\RecurringReferral;
 /** WooCommerce compatibility for Fluent Affiliate Pro 1.6.5. No vendor files are changed. */
 final class WooCompatibility extends RecurringReferral {
   private array $order_customer = [];
+  private static array $processing = [];
 
   public static function install(): void {
     global $wp_filter;
     $connector = new self();
+    add_action( 'facr_retry_woo_renewal', [ self::class, 'retryRenewal' ], 10, 2 );
     $hooks = [
       'woocommerce_store_api_checkout_order_processed' => [ Bootstrap::class, 'addPendingReferral' ],
       'woocommerce_checkout_order_processed' => [ Bootstrap::class, 'addPendingReferral' ],
@@ -35,6 +37,14 @@ final class WooCompatibility extends RecurringReferral {
     }
   }
 
+  public function addPendingReferral( $order ) {
+    $order = $order instanceof \WC_Order ? $order : wc_get_order( $order );
+    if ( ! $order || ( function_exists( 'wcs_order_contains_renewal' ) && wcs_order_contains_renewal( $order ) ) ) {
+      return;
+    }
+    return parent::addPendingReferral( $order );
+  }
+
   public function getCurrentAffiliateFromOrder( $order ) {
     $previous = $this->order_customer;
     $this->order_customer = [ 'user_id' => $order->get_user_id(), 'email' => $order->get_billing_email() ];
@@ -52,6 +62,50 @@ final class WooCompatibility extends RecurringReferral {
   }
 
   public function handleSubscriptionRenewal( $subscription, $renewalOrder ) {
+    if ( ! $renewalOrder instanceof \WC_Order || ! $subscription instanceof \WC_Subscription ) {
+      return;
+    }
+    $parentOrder = $subscription->get_parent();
+    if ( ! $parentOrder ) {
+      return;
+    }
+    global $wpdb;
+    // All renewals sharing a parent referral share its limit, even on different orders.
+    $lock = 'facr:' . hash( 'sha224', DB_NAME . ':' . $wpdb->prefix . ':renewal:' . $parentOrder->get_id() );
+    if ( isset( self::$processing[ $lock ] )
+      || (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) ) !== '1' ) {
+      // WooCommerce already supplies Action Scheduler. Do not drop a paid event
+      // on contention; a retry must also be able to schedule its own successor.
+      if ( ! as_schedule_single_action( time() + 30, 'facr_retry_woo_renewal', [ $subscription->get_id(), $renewalOrder->get_id() ], 'fa-commission-rules' ) ) {
+        throw new \RuntimeException( __( 'Could not schedule the affiliate renewal commission retry.', 'fa-commission-rules' ) );
+      }
+      return;
+    }
+    self::$processing[ $lock ] = true;
+    try {
+      // Duplicate and limit checks must run after acquiring the lock, for both parent types.
+      $this->recordRenewal( $subscription, $renewalOrder );
+    } finally {
+      unset( self::$processing[ $lock ] );
+      $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+    }
+  }
+
+  public static function retryRenewal( $subscriptionId, $orderId ): void {
+    $connector = new self();
+    if ( ! function_exists( 'wcs_get_subscription' ) || ! $connector->isEnabled()
+      || Fluent::referral_setting( 'enable_subscription_renewal', 'no' ) !== 'yes'
+      || $connector->getSetting( 'enable_subscription_renewal' ) !== 'yes' ) {
+      return;
+    }
+    $subscription = wcs_get_subscription( (int) $subscriptionId );
+    $order = wc_get_order( (int) $orderId );
+    if ( $subscription && $order && $order->is_paid() ) {
+      $connector->handleSubscriptionRenewal( $subscription, $order );
+    }
+  }
+
+  private function recordRenewal( $subscription, $renewalOrder ): void {
     if ( ! $renewalOrder instanceof \WC_Order || $this->getExistingReferral( $renewalOrder->get_id() ) ) {
       return;
     }
@@ -61,7 +115,8 @@ final class WooCompatibility extends RecurringReferral {
     }
     $parentReferral = $this->getExistingReferral( $parentOrder->get_id() );
     if ( ! $parentReferral || $parentReferral->type !== 'lifetime_sale' ) {
-      return parent::handleSubscriptionRenewal( $subscription, $renewalOrder );
+      parent::handleSubscriptionRenewal( $subscription, $renewalOrder );
+      return;
     }
 
     // The native handler hard-codes type=sale with no parent-lookup filter.
